@@ -19,7 +19,7 @@
     </div>
 @endif
 
-<form action="{{ route('book.store',$service) }}" method="POST">
+<form action="{{ route('book.store',$service)}}" method="POST">
     @csrf
 
     <input type="hidden" name="service_id" value="{{ $service->id }}">

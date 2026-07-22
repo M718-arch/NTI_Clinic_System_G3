@@ -6,7 +6,7 @@
     <div class="py-12">
         <div class="max-w-xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white p-6 shadow sm:rounded-lg">
-                <form method="POST" action="{{ route('services.store') }}">
+                <form method="POST" action="{{ route('doctor.services.store') }}">
                     @csrf
 
                     <div class="mb-4">
