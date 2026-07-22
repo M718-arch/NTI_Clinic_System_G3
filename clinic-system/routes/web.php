@@ -3,6 +3,7 @@
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ServiceController;
+use App\Http\Controllers\AppointmentController;
 
 
 Route::get('/', function () {
@@ -25,6 +26,11 @@ Route::middleware('auth')->group(function () {
 
     // Patient Routes
     Route::get('/services', [ServiceController::class, 'index'])->name('services.index');
+    Route::get('/book/{service}', [AppointmentController::class, 'create'])->name('book.create');
+    Route::post('/book/{service}', [AppointmentController::class, 'store'])->name('book.store');
+    Route::get('/my-bookings', [AppointmentController::class, 'myBookings'])
+    ->name('my.bookings');
 });
 
 require __DIR__.'/auth.php';
+

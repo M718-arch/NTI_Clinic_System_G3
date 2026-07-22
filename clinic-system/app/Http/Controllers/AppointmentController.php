@@ -1,0 +1,144 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Booking;
+use App\Models\Service;
+use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+
+class AppointmentController extends Controller
+{
+    public function index()
+    {
+        $services = Service::with('doctor', 'bookings')->get();
+        return view('patient.services', compact('services'));
+    }
+
+    public function create(Service $service)
+    {
+        return view('patient.book', compact('service'));
+    }
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'service_id' => 'required|exists:services,id',
+            'date' => 'required|date|after_or_equal:today',
+            'time' => 'required|date_format:H:i',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        $exists = Booking::where('service_id', $validated['service_id'])
+            ->where('date', $validated['date'])
+            ->where('time', $validated['time'])
+            ->where('status', '!=', 'cancelled')
+            ->exists();
+
+        if ($exists) {
+            return back()->withErrors([
+                'time' => 'هذا الموعد محجوز بالفعل، يرجى اختيار وقت آخر.'
+            ])->withInput();
+        }
+
+        Booking::create([
+            'patient_id' => Auth::id(),
+            'service_id' => $validated['service_id'],
+            'date' => $validated['date'],
+            'time' => $validated['time'],
+            'notes' => $validated['notes'] ?? null,
+            'status' => 'pending',
+        ]);
+
+        return redirect()->route('my.bookings')
+            ->with('success', '✅ تم حجز الموعد بنجاح');
+    }
+
+    public function myBookings()
+    {
+        $bookings = Booking::with(['service', 'service.doctor'])
+            ->where('patient_id', Auth::id())
+            ->orderBy('date', 'asc')
+            ->orderBy('time', 'asc')
+            ->get();
+
+        return view('patient.my-bookings', compact('bookings'));
+    }
+
+    public function doctorServices()
+    {
+        $services = Service::with(['bookings' => function ($query) {
+            $query->where('status', '!=', 'cancelled');
+        }])
+            ->where('doctor_id', Auth::id())
+            ->get();
+
+        return view('doctor.services', compact('services'));
+    }
+
+    public function adminAppointments()
+    {
+        $bookings = Booking::with(['patient', 'service', 'service.doctor'])
+            ->orderBy('date', 'asc')
+            ->orderBy('time', 'asc')
+            ->get();
+
+        return view('admin.appointments', compact('bookings'));
+    }
+
+    public function cancel(Booking $booking)
+    {
+        if (
+            Auth::id() != $booking->patient_id &&
+            Auth::id() != $booking->service->doctor_id &&
+            Auth::user()->role != 'admin'
+        ) {
+            abort(403, 'غير مسموح لك بإلغاء هذا الحجز.');
+        }
+
+        $booking->update(['status' => 'cancelled']);
+
+        return back()->with('success', '❌ تم إلغاء الحجز بنجاح');
+    }
+
+    // عرض صفحة إضافة خدمة جديدة
+    public function createService()
+    {
+        return view('doctor.create-service');
+    }
+
+    // حفظ الخدمة الجديدة
+    public function storeService(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'price' => 'nullable|numeric|min:0',
+        ]);
+
+        Service::create([
+            'doctor_id' => Auth::id(),
+            'name' => $validated['name'],
+            'description' => $validated['description'],
+            'price' => $validated['price'],
+        ]);
+
+        return redirect()->route('doctor.services')
+            ->with('success', '✅ تم إضافة الخدمة بنجاح!');
+    }
+
+    // عرض حجوزات الدكتور
+    public function doctorBookings()
+    {
+        $bookings = Booking::with(['patient', 'service'])
+            ->whereHas('service', function ($query) {
+                $query->where('doctor_id', Auth::id());
+            })
+            ->orderBy('date', 'asc')
+            ->orderBy('time', 'asc')
+            ->get();
+
+        return view('doctor.bookings', compact('bookings'));
+    }
+}

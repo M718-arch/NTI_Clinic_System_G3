@@ -29,9 +29,11 @@
                                 {{ $service->doctor?->name ?? 'Not Assigned' }}
                             </p>
 
-                            <button class="mt-4 px-4 py-2 bg-blue-600 text-white rounded">
-                                Book
-                            </button>
+                            <a href="{{ route('book.create', $service->id) }}" 
+                            class="mt-4 px-4 py-2 bg-blue-600 text-white rounded">
+                            Book                       
+                           </a>
+
                         </div>
                     @endforeach
                 </div>
