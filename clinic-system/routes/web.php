@@ -18,10 +18,13 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // your doctor routes go in the SAME group, not a separate one
+    // Doctor routes
     Route::get('/doctor/dashboard', [ServiceController::class, 'myServices'])->name('doctor.dashboard');
     Route::get('/services/create', [ServiceController::class, 'create'])->name('services.create');
     Route::post('/services', [ServiceController::class, 'store'])->name('services.store');
+
+    // Patient Routes
+    Route::get('/services', [ServiceController::class, 'index'])->name('services.index');
 });
 
 require __DIR__.'/auth.php';

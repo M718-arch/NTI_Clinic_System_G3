@@ -39,4 +39,13 @@ class ServiceController extends Controller
 
         return view('dashboard.doctor', compact('services'));
     }
+
+    // Patient: list all available services with doctor info
+    public function index()
+{
+    $services = Service::with('doctor')->get();
+
+    return view('services.index', compact('services'));
+}
+
 }
