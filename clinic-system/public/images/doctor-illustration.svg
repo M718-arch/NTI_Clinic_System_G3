@@ -1,0 +1,80 @@
+<svg width="420" height="360" viewBox="0 0 420 360" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Illustration of a doctor holding a medical clipboard beside a heartbeat monitor">
+  <defs>
+    <linearGradient id="coatGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#DCE9FF" stop-opacity="0.85"/>
+    </linearGradient>
+    <linearGradient id="skinGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFD9B8"/>
+      <stop offset="1" stop-color="#F4C39C"/>
+    </linearGradient>
+    <linearGradient id="scrubGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2563EB"/>
+      <stop offset="1" stop-color="#1D4ED8"/>
+    </linearGradient>
+    <radialGradient id="glowSpot" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#06B6D4" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#06B6D4" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <ellipse cx="210" cy="330" rx="150" ry="18" fill="#06B6D4" opacity="0.08"/>
+  <circle cx="210" cy="150" r="140" fill="url(#glowSpot)"/>
+
+  <!-- floor shadow -->
+  <ellipse cx="150" cy="332" rx="80" ry="10" fill="#000" opacity="0.15"/>
+
+  <!-- legs -->
+  <rect x="130" y="230" width="26" height="90" rx="10" fill="#0F1E45"/>
+  <rect x="172" y="230" width="26" height="90" rx="10" fill="#0F1E45"/>
+  <rect x="122" y="312" width="42" height="16" rx="8" fill="#071330"/>
+  <rect x="164" y="312" width="42" height="16" rx="8" fill="#071330"/>
+
+  <!-- coat body -->
+  <path d="M95 150 C95 120 120 100 160 100 L200 100 C240 100 265 120 265 150 L272 250 C272 268 258 280 240 280 L120 280 C102 280 88 268 88 250 Z" fill="url(#coatGrad)"/>
+  <!-- inner scrub -->
+  <path d="M150 108 L178 130 L206 108 L206 230 L150 230 Z" fill="url(#scrubGrad)"/>
+  <path d="M150 108 L178 130 L165 145 L142 118 Z" fill="#1E40AF"/>
+  <path d="M206 108 L178 130 L191 145 L214 118 Z" fill="#1E40AF"/>
+
+  <!-- coat lapels -->
+  <path d="M160 100 L150 108 L142 118 L132 150 L150 150 Z" fill="#EFF5FF"/>
+  <path d="M200 100 L206 108 L214 118 L224 150 L206 150 Z" fill="#EFF5FF"/>
+
+  <!-- stethoscope -->
+  <path d="M140 150 C140 175 150 190 178 190 C206 190 216 175 216 150" stroke="#0F1E45" stroke-width="6" fill="none" stroke-linecap="round"/>
+  <circle cx="178" cy="196" r="9" fill="#0F1E45"/>
+
+  <!-- ID badge -->
+  <rect x="222" y="165" width="20" height="26" rx="4" fill="#06B6D4"/>
+  <circle cx="232" cy="175" r="4" fill="#FFFFFF"/>
+
+  <!-- arms -->
+  <path d="M95 150 C80 165 72 190 76 220 L96 250 L112 240 L98 205 C96 190 100 172 110 158 Z" fill="url(#coatGrad)"/>
+  <path d="M265 150 C282 165 292 188 286 218 L262 246 L246 234 L262 202 C265 188 262 172 252 158 Z" fill="url(#coatGrad)"/>
+
+  <!-- clipboard -->
+  <rect x="60" y="222" width="52" height="66" rx="6" fill="#F8FAFF" stroke="#2563EB" stroke-width="2"/>
+  <rect x="78" y="216" width="16" height="10" rx="3" fill="#2563EB"/>
+  <line x1="70" y1="240" x2="102" y2="240" stroke="#2563EB" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="70" y1="250" x2="96" y2="250" stroke="#93C5FD" stroke-width="2.5" stroke-linecap="round"/>
+  <polyline points="68,266 76,258 82,268 90,254 100,262" fill="none" stroke="#06B6D4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- head -->
+  <circle cx="178" cy="70" r="38" fill="url(#skinGrad)"/>
+  <path d="M140 62 C140 30 160 14 178 14 C198 14 216 30 216 62 C216 50 206 50 200 44 C190 54 166 54 156 44 C150 50 140 50 140 62Z" fill="#1F2937"/>
+  <circle cx="163" cy="72" r="3.4" fill="#0F1E45"/>
+  <circle cx="193" cy="72" r="3.4" fill="#0F1E45"/>
+  <path d="M166 88 C172 93 184 93 190 88" stroke="#0F1E45" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+  <path d="M158 62 C164 58 172 57 178 59" stroke="#E8A97C" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.6"/>
+
+  <!-- mirror headband -->
+  <circle cx="178" cy="40" r="7" fill="#CBD5E1" stroke="#94A3B8" stroke-width="1.5"/>
+  <path d="M150 34 C160 24 196 24 206 34" stroke="#94A3B8" stroke-width="3" fill="none" stroke-linecap="round"/>
+
+  <!-- heartbeat monitor accent, floating beside doctor -->
+  <g transform="translate(300 190)" opacity="0.9">
+    <rect x="-8" y="-6" width="96" height="46" rx="10" fill="rgba(255,255,255,0.08)" stroke="#3B82F6" stroke-width="1.4"/>
+    <polyline points="-2,18 12,18 18,4 26,32 34,10 42,18 84,18" fill="none" stroke="#06B6D4" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

@@ -27,7 +27,7 @@ class ServiceController extends Controller
             'description' => $request->description,
         ]);
 
-        return redirect()->route('dashboard')->with('success', 'Service added successfully!');
+        return redirect()->route('doctor.dashboard')->with('success', 'Service added successfully!');
     }
 
     // Doctor's dashboard: list their own services + patient counts
