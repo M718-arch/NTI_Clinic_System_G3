@@ -2,51 +2,36 @@
 
 namespace Database\Factories;
 
-use App\Models\Doctor;
-use Illuminate\Database\Eloquent\Factories\Factory;
+use App\Models\User;
 use App\Models\Specialization;
-/**
- * @extends Factory<Doctor>
- */
+use Illuminate\Database\Eloquent\Factories\Factory;
+
 class DoctorFactory extends Factory
 {
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
+    public function definition(): array
+    {
+        return [
+            'user_id' => User::factory()->state([
+                'role' => 'doctor',
+            ]),
 
+            'specialization_id' => Specialization::inRandomOrder()->value('id'),
 
-public function definition(): array
-{
-    return [
+            'gender' => fake()->randomElement(['male', 'female']),
 
-        'specialization_id' => Specialization::inRandomOrder()->value('id'),
+            'date_of_birth' => fake()->dateTimeBetween('-55 years', '-28 years'),
 
-        'first_name' => fake()->firstName(),
+            'experience_years' => fake()->numberBetween(2, 25),
 
-        'last_name' => fake()->lastName(),
+            'consultation_fee' => fake()->numberBetween(200, 1000),
 
-        'email' => fake()->unique()->safeEmail(),
+            'address' => fake()->address(),
 
-        'phone' => fake()->unique()->numerify('010########'),
+            'bio' => fake()->paragraph(),
 
-        'gender' => fake()->randomElement(['male', 'female']),
+            'image' => null,
 
-        'date_of_birth' => fake()->dateTimeBetween('-60 years', '-28 years'),
-
-        'experience_years' => fake()->numberBetween(1, 25),
-
-        'consultation_fee' => fake()->numberBetween(200, 1000),
-
-        'address' => fake()->address(),
-
-        'bio' => fake()->paragraph(),
-
-        'image' => null,
-
-        'status' => fake()->boolean(90)
-
-    ];
-}
+            'status' => fake()->boolean(),
+        ];
+    }
 }

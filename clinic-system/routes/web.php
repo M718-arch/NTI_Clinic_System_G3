@@ -28,37 +28,55 @@ Route::middleware(['auth'])->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | Dashboard
-    |--------------------------------------------------------------------------
-    */
-
-    Route::get('/dashboard', [DashboardController::class, 'index'])
-        ->name('dashboard');
-
-    /*
-    |--------------------------------------------------------------------------
     | Admin Routes
     |--------------------------------------------------------------------------
     */
 
     Route::prefix('admin')
         ->name('admin.')
-        // ->middleware('admin') // هنضيفها بعد ما نعمل Middleware للـ Role
+        ->middleware('role:admin')
         ->group(function () {
 
-            // Admin Dashboard
             Route::get('/', [DashboardController::class, 'index'])
                 ->name('dashboard');
 
-            // Doctors CRUD
             Route::resource('doctors', DoctorController::class);
 
-            // Patients CRUD
             Route::resource('patients', PatientController::class);
 
-            // Reports
             Route::get('/reports', [ReportController::class, 'index'])
                 ->name('reports.index');
+        });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Doctor Routes
+    |--------------------------------------------------------------------------
+    */
+
+    Route::prefix('doctor')
+        ->name('doctor.')
+        ->middleware('role:doctor')
+        ->group(function () {
+
+            Route::view('/', 'doctor.dashboard')
+                ->name('dashboard');
+
+        });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Patient Routes
+    |--------------------------------------------------------------------------
+    */
+
+    Route::prefix('patient')
+        ->name('patient.')
+        ->middleware('role:patient')
+        ->group(function () {
+
+            Route::view('/', 'patient.dashboard')
+                ->name('dashboard');
 
         });
 
@@ -76,13 +94,6 @@ Route::middleware(['auth'])->group(function () {
 
     Route::delete('/profile', [ProfileController::class, 'destroy'])
         ->name('profile.destroy');
-
 });
-
-/*
-|--------------------------------------------------------------------------
-| Authentication Routes
-|--------------------------------------------------------------------------
-*/
 
 require __DIR__.'/auth.php';
