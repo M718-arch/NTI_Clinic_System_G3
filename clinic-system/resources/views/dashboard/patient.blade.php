@@ -1,3 +1,38 @@
+<!-- @extends('admin.layouts.app')
+
+@section('title', 'Patient Dashboard')
+
+@section('content')
+
+<div class="space-y-6">
+
+    <x-admin.page-header
+        title="Patient Dashboard"
+        description="Welcome back, {{ auth()->user()->name }} 👋" />
+
+    <div class="grid gap-6 md:grid-cols-2">
+
+        <x-admin.card>
+            <h3 class="text-lg font-semibold text-slate-800 mb-2">Browse Medical Services</h3>
+            <p class="text-sm text-slate-500 mb-4">Explore available professional services and book your appointments easily.</p>
+            <x-admin.button :href="route('patient.services.index')">
+                Browse Services
+            </x-admin.button>
+        </x-admin.card>
+
+        <x-admin.card>
+            <h3 class="text-lg font-semibold text-slate-800 mb-2">My Bookings</h3>
+            <p class="text-sm text-slate-500 mb-4">View and track the status of all your booked appointments.</p>
+            <x-admin.button :href="route('patient.my.bookings')" variant="secondary">
+                View My Bookings
+            </x-admin.button>
+        </x-admin.card>
+
+    </div>
+
+</div>
+
+@endsection -->
 <!-- <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">Patient Dashboard</h2>

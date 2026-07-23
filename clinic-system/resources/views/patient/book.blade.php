@@ -1,44 +1,59 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Book Appointment</title>
-</head>
-<body>
 
-<h1>Book Appointment</h1>
+@extends('admin.layouts.app')
 
-<h3>Service: {{ $service->name }}</h3>
+@section('title', 'Book Appointment')
 
-@if ($errors->any())
-    <div style="color:red;">
-        <ul>
-            @foreach ($errors->all() as $error)
-                <li>{{ $error }}</li>
-            @endforeach
-        </ul>
-    </div>
-@endif
+@section('content')
 
-<form action="{{ route('book.store',$service)}}" method="POST">
-    @csrf
+<div class="max-w-xl mx-auto space-y-6">
 
-    <input type="hidden" name="service_id" value="{{ $service->id }}">
+    <x-admin.page-header
+        title="Book Service: {{ $service->name }}"
+        description="{{ $service->description }}" />
 
-    <label>Date:</label>
-    <input type="date" name="date">
-    <br><br>
+    <x-admin.card>
+        <form action="{{ route('patient.book.store', $service->id) }}" method="POST">
+            @csrf
 
-    <label>Time:</label>
-    <input type="time" name="time">
-    <br><br>
+            <input type="hidden" name="service_id" value="{{ $service->id }}">
 
-    <label>Notes:</label>
-    <textarea name="notes"></textarea>
-    <br><br>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Appointment Date</label>
+                    <input type="date" name="date" min="{{ date('Y-m-d') }}" value="{{ old('date') }}" required
+                        class="w-full rounded-xl border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    @error('date')
+                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
 
-    <button type="submit">Book</button>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Appointment Time</label>
+                    <input type="time" name="time" value="{{ old('time') }}" required
+                        class="w-full rounded-xl border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    @error('time')
+                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
 
-</form>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Notes (Optional)</label>
+                    <textarea name="notes" rows="3"
+                        class="w-full rounded-xl border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500">{{ old('notes') }}</textarea>
+                    @error('notes')
+                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+            </div>
 
-</body>
-</html>
+            <div class="mt-6 flex justify-end gap-3">
+                <x-admin.button type="submit">
+                    Confirm Booking
+                </x-admin.button>
+            </div>
+        </form>
+    </x-admin.card>
+
+</div>
+
+@endsection

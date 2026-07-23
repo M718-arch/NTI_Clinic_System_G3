@@ -1,4 +1,4 @@
-<x-app-layout>
+<!-- <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">My Services</h2>
     </x-slot>
@@ -37,4 +37,45 @@
             </div>
         </div>
     </div>
-</x-app-layout>
+</x-app-layout> -->
+
+@extends('admin.layouts.app')
+
+@section('title', 'My Services')
+
+@section('content')
+
+<div class="space-y-6">
+
+    <x-admin.page-header
+        title="My Services"
+        description="Manage your medical services and view patient counts." />
+
+    <div class="flex justify-end">
+        <x-admin.button :href="route('doctor.services.create')">
+            + Add New Service
+        </x-admin.button>
+    </div>
+
+    <x-admin.card>
+        <div class="space-y-4">
+            @forelse ($services as $service)
+                <div class="flex items-center justify-between border-b border-slate-100 pb-4 last:border-0 last:pb-0">
+                    <div>
+                        <h3 class="font-medium text-slate-800">{{ $service->name }}</h3>
+                        <p class="text-sm text-slate-500">{{ $service->description }}</p>
+                    </div>
+
+                    <span class="text-xs font-medium px-2.5 py-1 rounded-full bg-blue-50 text-blue-600">
+                        Patients Booked: {{ $service->bookings_count ?? 0 }}
+                    </span>
+                </div>
+            @empty
+                <p class="text-center text-slate-500 py-6">No services yet.</p>
+            @endforelse
+        </div>
+    </x-admin.card>
+
+</div>
+
+@endsection

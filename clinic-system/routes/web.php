@@ -20,6 +20,18 @@ Route::get('/', function () {
     return view('welcome');
 })->name('home');
 
+Route::get('/dashboard', function () {
+    $user = auth()->user();
+
+    if ($user->role === 'admin') {
+        return redirect()->route('admin.dashboard');
+    } elseif ($user->role === 'doctor') {
+        return redirect()->route('doctor.dashboard');
+    }
+
+    return redirect()->route('patient.dashboard');
+})->middleware(['auth'])->name('dashboard');
+
 /*
 |--------------------------------------------------------------------------
 | Authenticated Routes
@@ -27,6 +39,15 @@ Route::get('/', function () {
 */
 
 Route::middleware(['auth'])->group(function () {
+
+    /*
+    |--------------------------------------------------------------------------
+    | Booking actions shared across roles (auth handled inside controller)
+    |--------------------------------------------------------------------------
+    */
+
+    Route::patch('/bookings/{booking}/cancel', [AppointmentController::class, 'cancel'])
+        ->name('bookings.cancel');
 
     /*
     |--------------------------------------------------------------------------
@@ -45,6 +66,9 @@ Route::middleware(['auth'])->group(function () {
             Route::resource('doctors', DoctorController::class);
 
             Route::resource('patients', PatientController::class);
+
+            Route::get('/appointments', [AppointmentController::class, 'adminAppointments'])
+                ->name('appointments.index');
 
             Route::get('/reports', [ReportController::class, 'index'])
                 ->name('reports.index');
@@ -69,6 +93,9 @@ Route::middleware(['auth'])->group(function () {
 
             Route::post('/services', [ServiceController::class, 'store'])
                 ->name('services.store');
+
+            Route::get('/bookings', [AppointmentController::class, 'doctorBookings'])
+                ->name('bookings.index');
         });
 
     /*

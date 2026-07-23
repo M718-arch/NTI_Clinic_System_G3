@@ -51,7 +51,7 @@ class AppointmentController extends Controller
             'status' => 'pending',
         ]);
 
-        return redirect()->route('my.bookings')
+        return redirect()->route('patient.my.bookings')
             ->with('success', '✅ تم حجز الموعد بنجاح');
     }
 
