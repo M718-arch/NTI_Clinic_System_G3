@@ -115,14 +115,9 @@
                     @click="open=!open"
                     class="flex items-center gap-3 rounded-xl p-2 hover:bg-slate-100 transition">
 
-
-    <img
-    src="{{ auth()->user()->doctor && auth()->user()->doctor->image
-        ? asset('../storage/' . auth()->user()->doctor->image)
-        : 'https://ui-avatars.com/api/?background=2563eb&color=fff&name=' . urlencode(auth()->user()->name) }}"
-    alt="{{ auth()->user()->name }}"
-    class="h-11 w-11 rounded-full object-cover">
-
+                    <img
+                        src="https://ui-avatars.com/api/?background=2563eb&color=fff&name={{ urlencode(auth()->user()->name) }}"
+                        class="h-11 w-11 rounded-full">
 
                     <div class="hidden md:block text-left">
 
@@ -157,7 +152,7 @@
 
                     </a>
 
-
+                    
 
                     <hr>
 

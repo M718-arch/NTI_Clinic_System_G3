@@ -1,17 +1,22 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">Book: {{ $service->name }}</h2>
-    </x-slot>
+@extends('patient.layouts.app')
 
-    <div class="py-12">
-        <div class="max-w-xl mx-auto sm:px-6 lg:px-8">
+@section('title', 'Doctor Bookings')
 
-            <a href="{{ route('patient.services.index') }}" class="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 mb-6 transition">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
-                </svg>
-                Back to Services
-            </a>
+@section('content')
+
+<div class="space-y-6">
+
+    <x-doctor.page-header
+        title="Patient Bookings"
+        description="View and manage appointments scheduled for your medical services." />
+
+    @if(session('success'))
+        <div class="mb-4 p-4 bg-green-100 text-green-700 rounded-xl">
+            {{ session('success') }}
+        </div>
+    @endif
+
+
 
             <div class="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
                 <div class="px-8 pt-8 pb-6 border-b border-slate-100">
@@ -55,6 +60,5 @@
                     </div>
                 </form>
             </div>
-        </div>
-    </div>
-</x-app-layout>
+        
+@endsection
