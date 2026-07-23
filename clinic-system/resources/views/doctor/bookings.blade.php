@@ -49,17 +49,48 @@
                                     </span>
                                 </td>
                                 <td class="py-3 px-4">
-                                    @if($booking->status !== 'cancelled')
-                                        <form action="{{ route('bookings.cancel', $booking) }}" method="POST">
-                                            @csrf
-                                            @method('PATCH')
-                                            <button type="submit" onclick="return confirm('Cancel this appointment?')"
-                                                class="text-red-600 text-xs font-medium hover:underline">
-                                                Cancel
-                                            </button>
-                                        </form>
-                                    @endif
-                                </td>
+    <div class="flex items-center gap-2">
+
+        @if($booking->status == 'pending')
+
+            <form action="{{ route('bookings.accept', $booking) }}" method="POST">
+                @csrf
+                @method('PATCH')
+                <button
+                    type="submit"
+                    onclick="return confirm('Accept this appointment?')"
+                    class="px-3 py-1 bg-green-600 text-white rounded-md text-xs hover:bg-green-700">
+                    Accept
+                </button>
+            </form>
+
+            <form action="{{ route('bookings.cancel', $booking) }}" method="POST">
+                @csrf
+                @method('PATCH')
+                <button
+                    type="submit"
+                    onclick="return confirm('Cancel this appointment?')"
+                    class="px-3 py-1 bg-red-600 text-white rounded-md text-xs hover:bg-red-700">
+                    Cancel
+                </button>
+            </form>
+
+        @elseif($booking->status == 'accepted')
+
+            <span class="text-green-600 font-semibold text-xs">
+                Accepted
+            </span>
+
+        @elseif($booking->status == 'cancelled')
+
+            <span class="text-red-600 font-semibold text-xs">
+                Cancelled
+            </span>
+
+        @endif
+
+    </div>
+</td>
                                 <td class="py-3 px-4 text-slate-500">{{ $booking->notes ?? '-' }}</td>
                             </tr>
                         @endforeach

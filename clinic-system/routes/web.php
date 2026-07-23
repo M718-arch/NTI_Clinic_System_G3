@@ -48,6 +48,8 @@ Route::middleware(['auth'])->group(function () {
 
     Route::patch('/bookings/{booking}/cancel', [AppointmentController::class, 'cancel'])
         ->name('bookings.cancel');
+        Route::patch('/bookings/{booking}/accept', [AppointmentController::class, 'accept'])
+        ->name('bookings.accept');
 
     /*
     |--------------------------------------------------------------------------
@@ -96,6 +98,7 @@ Route::middleware(['auth'])->group(function () {
 
             Route::get('/bookings', [AppointmentController::class, 'doctorBookings'])
                 ->name('bookings.index');
+                
         });
 
     /*
