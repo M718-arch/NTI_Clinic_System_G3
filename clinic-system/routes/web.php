@@ -21,7 +21,7 @@ Route::get('/', function () {
 })->name('home');
 
 Route::get('/dashboard', function () {
-    $user = auth()->user();
+    $user = auth();
 
     if ($user->role === 'admin') {
         return redirect()->route('admin.dashboard');
@@ -96,6 +96,13 @@ Route::middleware(['auth'])->group(function () {
 
             Route::get('/bookings', [AppointmentController::class, 'doctorBookings'])
                 ->name('bookings.index');
+                Route::delete('/services/{service}', [ServiceController::class, 'destroy'])
+    ->name('services.destroy');
+        Route::get('/services/{service}/edit', [ServiceController::class, 'edit'])
+    ->name('services.edit');
+
+Route::put('/services/{service}', [ServiceController::class, 'update'])
+    ->name('services.update');
         });
 
     /*

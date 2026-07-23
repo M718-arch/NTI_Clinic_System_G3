@@ -37,7 +37,7 @@ class ServiceController extends Controller
             ->withCount('bookings')
             ->get();
 
-        return view('dashboard.doctor', compact('services'));
+        return view('doctor.dashboard', compact('services'));
     }
 
     // Patient: list all available services with doctor info
@@ -47,5 +47,45 @@ class ServiceController extends Controller
 
     return view('services.index', compact('services'));
 }
+public function destroy(Service $service)
+{
+    if ($service->doctor_id !== auth()->id()) {
+        abort(403);
+    }
 
+    if ($service->appointments()->exists()) {
+        return back()->with('error', 'You cannot delete a service that has bookings.');
+    }
+
+    $service->delete();
+
+    return redirect()
+        ->route('doctor.dashboard')
+        ->with('success', 'Service deleted successfully.');
+}
+public function edit(Service $service)
+{
+    if ($service->doctor_id != auth()->id()) {
+        abort(403);
+    }
+
+    return view('services.edit', compact('service'));
+}
+public function update(Request $request, Service $service)
+{
+    if ($service->doctor_id != auth()->id()) {
+        abort(403);
+    }
+
+    $validated = $request->validate([
+        'name' => 'required|string|max:255',
+        'description' => 'required|string',
+    ]);
+
+    $service->update($validated);
+
+    return redirect()
+        ->route('doctor.dashboard')
+        ->with('success', 'Service updated successfully.');
+}
 }

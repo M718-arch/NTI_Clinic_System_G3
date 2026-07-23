@@ -1,16 +1,20 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">My Services</h2>
-    </x-slot>
+@extends('doctor.layouts.app')
 
-    <div class="py-12">
-        <div class="max-w-5xl mx-auto sm:px-6 lg:px-8 space-y-6">
+@section('title', 'Dashboard')
 
-            @if (session('success'))
-                <div class="p-4 bg-green-100 border border-green-300 text-green-800 rounded-lg text-sm">
-                    {{ session('success') }}
-                </div>
-            @endif
+@section('content')
+
+<div class="space-y-6">
+
+    <x-doctor.page-header
+        title="My Services"
+        description="View and manage appointments scheduled for your medical services." />
+
+    @if(session('success'))
+        <div class="mb-4 p-4 bg-green-100 text-green-700 rounded-xl">
+            {{ session('success') }}
+        </div>
+    @endif
 
             <!-- Stats row -->
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -61,7 +65,7 @@
                 </a>
                 <a href="{{ route('doctor.services.create') }}"
                    class="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg shadow-sm transition">
-                    + Add New Service
+                    Add New Service
                 </a>
             </div>
 
@@ -82,6 +86,7 @@
                                 <th class="px-6 py-3 font-medium">Service</th>
                                 <th class="px-6 py-3 font-medium">Description</th>
                                 <th class="px-6 py-3 font-medium text-right">Patients Booked</th>
+                                <th class="px-6 py-3 font-medium text-center">Actions</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100">
@@ -95,6 +100,27 @@
                                             {{ $service->bookings_count ?? 0 }}
                                         </span>
                                     </td>
+                                    <td class="px-6 py-4">
+    <div class="flex justify-center gap-2">
+
+        <a
+            href="{{ route('doctor.services.edit', $service) }}"
+            class="rounded-lg bg-amber-500 px-3 py-2 text-sm font-medium text-white hover:bg-amber-600 transition">
+            Edit
+        </a>
+
+        <button
+            @click="
+                deleteUrl='{{ route('doctor.services.destroy', $service) }}';
+                showDeleteModal=true
+            "
+            class="rounded-lg bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700 transition">
+            Delete
+        </button>
+
+    </div>
+</td>
+
                                 </tr>
                             @endforeach
                         </tbody>
@@ -103,4 +129,46 @@
             </div>
         </div>
     </div>
-</x-app-layout>
+    <div
+    x-show="showDeleteModal"
+    x-transition
+    x-cloak
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+
+    <div
+        @click.outside="showDeleteModal=false"
+        class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+
+        <h2 class="text-xl font-bold text-slate-800">
+            Delete Service
+        </h2>
+
+        <p class="mt-2 text-slate-500">
+            Are you sure you want to delete this service?
+        </p>
+
+        <div class="mt-6 flex justify-end gap-3">
+
+            <button
+                @click="showDeleteModal=false"
+                class="rounded-lg border border-slate-300 px-4 py-2 hover:bg-slate-100">
+                Cancel
+            </button>
+
+            <form :action="deleteUrl" method="POST">
+                @csrf
+                @method('DELETE')
+
+                <button
+                    type="submit"
+                    class="rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700">
+                    Delete
+                </button>
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+@endsection

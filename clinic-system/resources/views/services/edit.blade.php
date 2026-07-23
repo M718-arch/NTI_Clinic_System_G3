@@ -1,12 +1,12 @@
 @extends('doctor.layouts.app')
 
-@section('title', 'Create Service')
+@section('title', 'Update Service')
 
 @section('content')
 
    <x-doctor.page-header
-    title="Add New Service"
-    description="Create a medical service for patients to book." />
+    title="Update Service"
+    description="Update a medical service for patients to book." />
 
 
             <div class="grid md:grid-cols-5 gap-6">
@@ -28,16 +28,24 @@
                         </div>
                     </div>
 
-                    <form method="POST" action="{{ route('doctor.services.store') }}" class="p-8 space-y-6" x-data="{ name: '', description: '' }">
-                        @csrf
-
+                    <form action="{{ route('doctor.services.update', $service) }}" method="POST" class="p-8 space-y-6" x-data="{
+        name: @js(old('name', $service->name)),
+        description: @js(old('description', $service->description))
+    }">
+    @csrf
+    @method('PUT')
                         <div>
                             <label class="block text-sm font-medium text-slate-700 mb-1.5">
                                 Service Name <span class="text-red-500">*</span>
                             </label>
-                            <input type="text" name="name" x-model="name" value="{{ old('name') }}"
-                                   class="block w-full rounded-lg border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 focus:ring-1 text-sm px-3.5 py-2.5 transition"
-                                   placeholder="e.g. General Checkup" required>
+                            <input
+    type="text"
+    name="name"
+    x-model="name"
+    value="{{ old('name', $service->name) }}"
+    class="block w-full rounded-lg border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 focus:ring-1 text-sm px-3.5 py-2.5 transition"
+    placeholder="e.g. General Checkup"
+    required>
                             @error('name')
                                 <p class="text-red-600 text-xs mt-1.5 flex items-center gap-1">
                                     <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0 3.75h.008v.008H12v-.008zM21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -60,10 +68,8 @@
                         <div class="flex items-center gap-3 pt-4 border-t border-slate-100">
                             <button type="submit"
                                     class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2.5 rounded-lg shadow-sm transition">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-                                </svg>
-                                Add Service
+
+                                Update Service
                             </button>
                             <a href="{{ route('doctor.dashboard') }}" class="text-sm font-medium text-slate-500 hover:text-slate-800 transition">
                                 Cancel

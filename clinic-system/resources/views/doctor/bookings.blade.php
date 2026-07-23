@@ -1,4 +1,4 @@
-@extends('admin.layouts.app')
+@extends('doctor.layouts.app')
 
 @section('title', 'Doctor Bookings')
 
@@ -6,7 +6,7 @@
 
 <div class="space-y-6">
 
-    <x-admin.page-header
+    <x-doctor.page-header
         title="Patient Bookings"
         description="View and manage appointments scheduled for your medical services." />
 
@@ -16,7 +16,7 @@
         </div>
     @endif
 
-    <x-admin.card>
+    <x-doctor.card>
         @if($bookings->isEmpty())
             <p class="text-center text-slate-500 py-6">You have no patient bookings yet.</p>
         @else
@@ -41,9 +41,9 @@
                                 <td class="py-3 px-4">{{ $booking->date }}</td>
                                 <td class="py-3 px-4">{{ $booking->time }}</td>
                                 <td class="py-3 px-4">
-                                    <span class="px-2.5 py-1 text-xs font-medium rounded-full 
-                                        @if($booking->status == 'pending') bg-yellow-50 text-yellow-600 
-                                        @elseif($booking->status == 'cancelled') bg-red-50 text-red-600 
+                                    <span class="px-2.5 py-1 text-xs font-medium rounded-full
+                                        @if($booking->status == 'pending') bg-yellow-50 text-yellow-600
+                                        @elseif($booking->status == 'cancelled') bg-red-50 text-red-600
                                         @else bg-green-50 text-green-600 @endif">
                                         {{ ucfirst($booking->status) }}
                                     </span>
@@ -67,7 +67,7 @@
                 </table>
             </div>
         @endif
-    </x-admin.card>
+    </x-doctor.card>
 
 </div>
 

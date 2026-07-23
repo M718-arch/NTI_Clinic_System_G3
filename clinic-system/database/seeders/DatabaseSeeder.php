@@ -10,6 +10,10 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        $this->call([
+            SpecializationSeeder::class,
+        ]);
+
         Doctor::factory(10)->create();
 
         Patient::factory(50)->create();
