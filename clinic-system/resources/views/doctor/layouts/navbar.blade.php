@@ -118,7 +118,7 @@
 
     <img
     src="{{ auth()->user()->doctor && auth()->user()->doctor->image
-        ? asset('../storage/' . auth()->user()->doctor->image)
+        ? asset('../storage/app/public/doctor/' . auth()->user()->doctor->image)
         : 'https://ui-avatars.com/api/?background=2563eb&color=fff&name=' . urlencode(auth()->user()->name) }}"
     alt="{{ auth()->user()->name }}"
     class="h-11 w-11 rounded-full object-cover">

@@ -21,16 +21,15 @@ class AppointmentController extends Controller
         return view('patient.book', compact('service'));
     }
 
-    public function store(Request $request)
+    public function store(Request $request, Service $service)
     {
         $validated = $request->validate([
-            'service_id' => 'required|exists:services,id',
             'date' => 'required|date|after_or_equal:today',
             'time' => 'required|date_format:H:i',
             'notes' => 'nullable|string|max:500',
         ]);
 
-        $exists = Booking::where('service_id', $validated['service_id'])
+        $exists = Booking::where('service_id', $service->id)
             ->where('date', $validated['date'])
             ->where('time', $validated['time'])
             ->where('status', '!=', 'cancelled')
@@ -38,13 +37,13 @@ class AppointmentController extends Controller
 
         if ($exists) {
             return back()->withErrors([
-                'time' => 'هذا الموعد محجوز بالفعل، يرجى اختيار وقت آخر.'
+                'time' => 'This appointment is already booked. Please choose another time.'
             ])->withInput();
         }
 
         Booking::create([
             'patient_id' => Auth::id(),
-            'service_id' => $validated['service_id'],
+            'service_id' => $service->id,
             'date' => $validated['date'],
             'time' => $validated['time'],
             'notes' => $validated['notes'] ?? null,
@@ -52,7 +51,7 @@ class AppointmentController extends Controller
         ]);
 
         return redirect()->route('patient.my.bookings')
-            ->with('success', '✅ تم حجز الموعد بنجاح');
+            ->with('success', 'Appointment booked successfully.');
     }
 
     public function myBookings()
@@ -63,7 +62,7 @@ class AppointmentController extends Controller
             ->orderBy('time', 'asc')
             ->get();
 
-        return view('patient.my-bookings', compact('bookings'));
+        return view('patient.bookings.my-bookings', compact('bookings'));
     }
 
     public function doctorServices()
@@ -94,29 +93,30 @@ class AppointmentController extends Controller
             Auth::id() != $booking->service->doctor_id &&
             Auth::user()->role != 'admin'
         ) {
-            abort(403, 'غير مسموح لك بإلغاء هذا الحجز.');
+            abort(403, 'You are not authorized to cancel this appointment.');
         }
 
-        $booking->update(['status' => 'cancelled']);
+        $booking->update([
+            'status' => 'cancelled',
+        ]);
 
-        return back()->with('success', '❌ تم إلغاء الحجز بنجاح');
+        return back()->with('success', 'Appointment cancelled successfully.');
     }
+
     public function accept(Booking $booking)
-{
-    $booking->update([
-        'status' => 'accepted',
-    ]);
+    {
+        $booking->update([
+            'status' => 'accepted',
+        ]);
 
-    return back()->with('success', 'Appointment accepted successfully.');
-}
+        return back()->with('success', 'Appointment accepted successfully.');
+    }
 
-    // عرض صفحة إضافة خدمة جديدة
     public function createService()
     {
         return view('doctor.create-service');
     }
 
-    // حفظ الخدمة الجديدة
     public function storeService(Request $request)
     {
         $validated = $request->validate([
@@ -133,10 +133,9 @@ class AppointmentController extends Controller
         ]);
 
         return redirect()->route('doctor.services')
-            ->with('success', '✅ تم إضافة الخدمة بنجاح!');
+            ->with('success', 'Service added successfully.');
     }
 
-    // عرض حجوزات الدكتور
     public function doctorBookings()
     {
         $bookings = Booking::with(['patient', 'service'])
@@ -149,4 +148,43 @@ class AppointmentController extends Controller
 
         return view('doctor.bookings', compact('bookings'));
     }
+    public function edit(Booking $booking)
+{
+    if ($booking->patient_id != Auth::id()) {
+        abort(403);
+    }
+
+    return view('patient.bookings.edit-booking', compact('booking'));
+}
+public function update(Request $request, Booking $booking)
+{
+    if ($booking->patient_id != Auth::id()) {
+        abort(403);
+    }
+
+    $validated = $request->validate([
+        'date' => 'required|date|after_or_equal:today',
+        'time' => 'required|date_format:H:i',
+        'notes' => 'nullable|string|max:500',
+    ]);
+
+    $exists = Booking::where('service_id', $booking->service_id)
+        ->where('date', $validated['date'])
+        ->where('time', $validated['time'])
+        ->where('id', '!=', $booking->id)
+        ->where('status', '!=', 'cancelled')
+        ->exists();
+
+    if ($exists) {
+        return back()->withErrors([
+            'time' => 'This appointment is already booked.'
+        ])->withInput();
+    }
+
+    $booking->update($validated);
+
+    return redirect()
+        ->route('patient.my.bookings')
+        ->with('success', 'Appointment updated successfully.');
+}
 }

@@ -1,43 +1,56 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">Available Medical Services</h2>
-    </x-slot>
+@extends('patient.layouts.app')
 
-    <div class="py-12">
-        <div class="max-w-5xl mx-auto sm:px-6 lg:px-8">
+@section('title', 'Browse Services')
 
-            @if (session('success'))
-                <div class="mb-6 p-4 bg-green-100 border border-green-300 text-green-800 rounded-lg text-sm">
-                    {{ session('success') }}
+@section('content')
+
+<div class="space-y-6">
+
+    <x-patient.page-header
+        title="Available Medical Services"
+        description="Browse through professional services and book an appointment." />
+
+    <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+
+        @forelse($services as $service)
+
+            <x-patient.card>
+                <div class="flex flex-col justify-between h-full space-y-4">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <h2 class="text-lg font-semibold text-slate-800">
+                                {{ $service->name }}
+                            </h2>
+                            <span class="text-xs font-medium px-2.5 py-1 rounded-full bg-blue-50 text-blue-600">
+                                Dr. {{ $service->doctor->name ?? 'Specialist' }}
+                            </span>
+                        </div>
+
+                        <p class="text-sm text-slate-500">
+                            {{ $service->description }}
+                        </p>
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-100 flex justify-end">
+                        <a href="{{ route('patient.book.create', $service->id) }}" class="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 transition">
+                            Book Appointment
+                        </a>
+                    </div>
                 </div>
-            @endif
+            </x-patient.card>
 
-            <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-                @forelse($services as $service)
-                    <div class="bg-white rounded-xl border border-slate-100 shadow-sm p-5 flex flex-col justify-between hover:shadow-md transition">
-                        <div>
-                            <div class="flex items-start justify-between gap-2 mb-2">
-                                <h3 class="font-semibold text-slate-800">{{ $service->name }}</h3>
-                                <span class="shrink-0 text-xs font-medium px-2.5 py-1 rounded-full bg-blue-50 text-blue-600 whitespace-nowrap">
-                                    Dr. {{ $service->doctor->name ?? 'Specialist' }}
-                                </span>
-                            </div>
-                            <p class="text-sm text-slate-500">{{ $service->description ?: 'No description provided.' }}</p>
-                        </div>
-
-                        <div class="pt-4 mt-4 border-t border-slate-100">
-                            <a href="{{ route('patient.book.create', $service->id) }}"
-                               class="inline-flex items-center justify-center w-full gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2.5 rounded-lg shadow-sm transition">
-                                Book Appointment
-                            </a>
-                        </div>
-                    </div>
-                @empty
-                    <div class="col-span-full bg-white rounded-xl border border-slate-100 p-10 text-center text-slate-400">
+        @empty
+            <div class="col-span-full">
+                <x-patient.card>
+                    <p class="text-center text-slate-500 py-6">
                         No medical services available at the moment.
-                    </div>
-                @endforelse
+                    </p>
+                </x-patient.card>
             </div>
-        </div>
+        @endforelse
+
     </div>
-</x-app-layout>
+
+</div>
+
+@endsection

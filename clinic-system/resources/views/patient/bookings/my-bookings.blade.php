@@ -1,10 +1,16 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">My Bookings</h2>
-    </x-slot>
+@extends('patient.layouts.app')
 
-    <div class="py-12">
-        <div class="max-w-5xl mx-auto sm:px-6 lg:px-8 space-y-6">
+@section('title', 'My Bookings')
+
+@section('content')
+
+<div class="space-y-6">
+
+    <x-doctor.page-header
+        title="My Bookings"
+        description="View and manage appointments scheduled for your medical services." />
+
+
 
             @if(session('success'))
                 <div class="p-4 bg-green-100 border border-green-300 text-green-800 rounded-lg text-sm">
@@ -58,8 +64,12 @@
                                                 <form action="{{ route('bookings.cancel', $booking) }}" method="POST">
                                                     @csrf
                                                     @method('PATCH')
+                                                    <a href="{{ route('patient.bookings.edit', $booking) }}"
+                                                    class="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                                                        Edit
+                                                    </a>
                                                     <button type="submit" onclick="return confirm('Cancel this appointment?')"
-                                                        class="text-red-600 text-xs font-medium hover:underline">
+                                                        class="rounded-lg border border-slate-300 px-4 py-2 hover:bg-slate-100" style="background-color:brown; color: white;">
                                                         Cancel
                                                     </button>
                                                 </form>
@@ -76,4 +86,4 @@
             </div>
         </div>
     </div>
-</x-app-layout>
+@endsection

@@ -23,9 +23,9 @@ Route::get('/', function () {
 Route::get('/dashboard', function () {
     $user = auth();
 
-    if ($user->role === 'admin') {
+    if ($user->role() === 'admin') {
         return redirect()->route('admin.dashboard');
-    } elseif ($user->role === 'doctor') {
+    } elseif ($user->role() === 'doctor') {
         return redirect()->route('doctor.dashboard');
     }
 
@@ -98,13 +98,13 @@ Route::middleware(['auth'])->group(function () {
 
             Route::get('/bookings', [AppointmentController::class, 'doctorBookings'])
                 ->name('bookings.index');
-                Route::delete('/services/{service}', [ServiceController::class, 'destroy'])
-    ->name('services.destroy');
-        Route::get('/services/{service}/edit', [ServiceController::class, 'edit'])
-    ->name('services.edit');
+            Route::delete('/services/{service}', [ServiceController::class, 'destroy'])
+                ->name('services.destroy');
+            Route::get('/services/{service}/edit', [ServiceController::class, 'edit'])
+                ->name('services.edit');
 
-Route::put('/services/{service}', [ServiceController::class, 'update'])
-    ->name('services.update');
+        Route::put('/services/{service}', [ServiceController::class, 'update'])
+            ->name('services.update');
         });
 
     /*
@@ -132,7 +132,12 @@ Route::put('/services/{service}', [ServiceController::class, 'update'])
 
             Route::get('/my-bookings', [AppointmentController::class, 'myBookings'])
                 ->name('my.bookings');
-        });
+            Route::get('/my-bookings/{booking}/edit', [AppointmentController::class, 'edit'])
+    ->name('bookings.edit');
+
+Route::put('/my-bookings/{booking}', [AppointmentController::class, 'update'])
+    ->name('bookings.update');
+});
 
     /*
     |--------------------------------------------------------------------------

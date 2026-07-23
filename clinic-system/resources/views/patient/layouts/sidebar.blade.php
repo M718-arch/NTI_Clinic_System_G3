@@ -124,8 +124,8 @@
         </x-patient.sidebar-link>
 
         <x-patient.sidebar-link
-            :href="route('doctor.services.create')"
-            route="doctor.services.*">
+            :href="route('patient.services.index')"
+            route="patient.services.*">
 
             <x-slot:icon>
 
@@ -150,9 +150,10 @@
 
         </x-patient.sidebar-link>
 
+
         <x-patient.sidebar-link
-            :href="route('doctor.bookings.index')"
-            route="doctor.bookings.*">
+            :href="route('patient.my.bookings')"
+            route="patient.bookings.my-bookings">
 
             <x-slot:icon>
 
@@ -171,7 +172,7 @@
 
             </x-slot:icon>
 
-            Bookings
+            My Bookings
 
         </x-patient.sidebar-link>
 

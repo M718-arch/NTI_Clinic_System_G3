@@ -1,4 +1,10 @@
-@extends('doctor.layouts.app')
+@extends(
+    auth()->user()->role === 'admin'
+        ? 'admin.layouts.app'
+        : (auth()->user()->role === 'doctor'
+            ? 'doctor.layouts.app'
+            : 'patient.layouts.app')
+)
 
 @section('title', 'My Profile')
 

@@ -1,3 +1,8 @@
+<?php
+if (in_array($booking->status, ['accepted', 'cancelled'])) {
+    return back()->with('error', 'This appointment can no longer be edited.');
+}
+?>
 @extends('patient.layouts.app')
 
 @section('title', 'Doctor Bookings')
@@ -20,22 +25,24 @@
 
             <div class="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
                 <div class="px-8 pt-8 pb-6 border-b border-slate-100">
-                    <h3 class="font-semibold text-slate-800">{{ $service->name }}</h3>
-                    <p class="text-sm text-slate-500 mt-1">{{ $service->description }}</p>
+                    <h3 class="font-semibold text-slate-800">{{ $booking->name }}</h3>
+                    <p class="text-sm text-slate-500 mt-1">{{ $booking->description }}</p>
                 </div>
-                <form action="{{ route('patient.book.store', $service) }}" method="POST" class="p-8 space-y-5">
-                    @csrf
+                <form action="{{ route('patient.bookings.update', $booking) }}" method="POST" class="p-8 space-y-5">
+    @csrf
+    @method('PUT')
 
-                    <div>
+<div>
                         <label class="block text-sm font-medium text-slate-700 mb-1.5">Appointment Date</label>
-                        <input type="date" name="date" min="{{ date('Y-m-d') }}" value="{{ old('date') }}" required
+                        <input type="date" name="date" min="{{ date('Y-m-d') }}" value="{{ old('date', $booking->date) }}" required
                                class="block w-full rounded-lg border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3.5 py-2.5">
                         @error('date') <p class="text-red-600 text-xs mt-1.5">{{ $message }}</p> @enderror
                     </div>
 
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1.5">Appointment Time</label>
-                        <input type="time" name="time" value="{{ old('time') }}" required
+                        <input type="time" name="time" value="{{ old('time', $booking->time) }}"
+ required
                                class="block w-full rounded-lg border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3.5 py-2.5">
                         @error('time') <p class="text-red-600 text-xs mt-1.5">{{ $message }}</p> @enderror
                     </div>
@@ -43,7 +50,7 @@
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1.5">Notes (Optional)</label>
                         <textarea name="notes" rows="3"
-                                  class="block w-full rounded-lg border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3.5 py-2.5">{{ old('notes') }}</textarea>
+                                  class="block w-full rounded-lg border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3.5 py-2.5">{{ old('notes', $booking->notes) }}</textarea>
                         @error('notes') <p class="text-red-600 text-xs mt-1.5">{{ $message }}</p> @enderror
                     </div>
 
@@ -56,7 +63,7 @@
                             Cancel
                         </a>
                     </div>
-                </form>
+</form>
             </div>
 
 @endsection
