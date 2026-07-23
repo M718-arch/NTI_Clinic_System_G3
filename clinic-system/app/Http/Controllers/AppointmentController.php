@@ -101,6 +101,14 @@ class AppointmentController extends Controller
 
         return back()->with('success', '❌ تم إلغاء الحجز بنجاح');
     }
+    public function accept(Booking $booking)
+{
+    $booking->update([
+        'status' => 'accepted',
+    ]);
+
+    return back()->with('success', 'Appointment accepted successfully.');
+}
 
     // عرض صفحة إضافة خدمة جديدة
     public function createService()
