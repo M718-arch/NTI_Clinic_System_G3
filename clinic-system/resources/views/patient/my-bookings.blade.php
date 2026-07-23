@@ -1,122 +1,79 @@
-<!-- <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Bookings</title>
-</head>
-<body>
+<x-app-layout>
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl text-gray-800 leading-tight">My Bookings</h2>
+    </x-slot>
 
-    <h1>My Bookings</h1>
+    <div class="py-12">
+        <div class="max-w-5xl mx-auto sm:px-6 lg:px-8 space-y-6">
 
-    @if(session('success'))
-        <p style="color: green;">
-            {{ session('success') }}
-        </p>
-    @endif
+            @if(session('success'))
+                <div class="p-4 bg-green-100 border border-green-300 text-green-800 rounded-lg text-sm">
+                    {{ session('success') }}
+                </div>
+            @endif
 
-    @if($bookings->isEmpty())
-        <p>You have no bookings yet.</p>
-    @else
-        <table border="1" cellpadding="10">
-            <tr>
-                <th>Service</th>
-                <th>Doctor</th>
-                <th>Date</th>
-                <th>Time</th>
-                <th>Status</th>
-                <th>Notes</th>
-            </tr>
-
-            @foreach($bookings as $booking)
-                <tr>
-                    <td>{{ $booking->service->name }}</td>
-                    <td>{{ $booking->service->doctor->name }}</td>
-                    <td>{{ $booking->date }}</td>
-                    <td>{{ $booking->time }}</td>
-                    <td>{{ $booking->status }}</td>
-                    <td>{{ $booking->notes }}</td>
-                </tr>
-            @endforeach
-
-        </table>
-    @endif
-
-</body>
-</html> -->
-@extends('admin.layouts.app')
-
-@section('title', 'My Bookings')
-
-@section('content')
-
-<div class="space-y-6">
-
-    <x-admin.page-header
-        title="My Bookings"
-        description="Track your scheduled appointments and medical services." />
-
-    @if(session('success'))
-        <div class="mb-4 p-4 bg-green-100 text-green-700 rounded-xl">
-            {{ session('success') }}
-        </div>
-    @endif
-
-    <x-admin.card>
-        @if($bookings->isEmpty())
-            <p class="text-center text-slate-500 py-6">You have no bookings yet.</p>
-        @else
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="border-b border-slate-200 text-slate-600 text-sm">
-                            <th class="pb-3 px-4 font-semibold">Service</th>
-                            <th class="pb-3 px-4 font-semibold">Doctor</th>
-                            <th class="pb-3 px-4 font-semibold">Date</th>
-                            <th class="pb-3 px-4 font-semibold">Time</th>
-                            <th class="pb-3 px-4 font-semibold">Status</th>
-                            <th class="pb-3 px-4 font-semibold text-center">Actions</th>
-                            <th class="pb-3 px-4 font-semibold">Notes</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100 text-sm text-slate-700">
-                        @foreach($bookings as $booking)
-                            <tr>
-                                <td class="py-3 px-4 font-medium text-slate-800">{{ $booking->service->name ?? 'N/A' }}</td>
-                                <td class="py-3 px-4">{{ $booking->service->doctor->name ?? 'N/A' }}</td>
-                                <td class="py-3 px-4">{{ $booking->date }}</td>
-                                <td class="py-3 px-4">{{ $booking->time }}</td>
-                                <td class="py-3 px-4">
-                                    <span class="px-2.5 py-1 text-xs font-medium rounded-full 
-                                        @if($booking->status == 'pending') bg-yellow-50 text-yellow-600 
-                                        @elseif($booking->status == 'cancelled') bg-red-50 text-red-600 
-                                        @else bg-green-50 text-green-600 @endif">
-                                        {{ ucfirst($booking->status) }}
-                                    </span>
-                                </td>
-                                <td class="py-3 px-4 text-center">
-    @if($booking->status !== 'cancelled')
-        <form action="{{ route('bookings.cancel', $booking) }}" method="POST">
-            @csrf
-            @method('PATCH')
-            <button type="submit" onclick="return confirm('Cancel this appointment?')"
-                class="text-red-600 text-xs font-medium hover:underline">
-                Cancel
-            </button>
-        </form>
-    @else
-        <span class="text-slate-400">—</span>
-    @endif
-</td>
-                                <td class="py-3 px-4 text-slate-500">{{ $booking->notes ?? '-' }}</td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+            <div class="bg-white shadow-sm rounded-xl border border-slate-100 overflow-hidden">
+                @if($bookings->isEmpty())
+                    <div class="text-center py-12">
+                        <svg class="w-12 h-12 text-slate-300 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <p class="text-slate-500 text-sm">You have no bookings yet.</p>
+                        <a href="{{ route('patient.services.index') }}" class="inline-block mt-3 text-blue-600 text-sm font-medium hover:underline">
+                            Browse services to book one →
+                        </a>
+                    </div>
+                @else
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-50 text-slate-500 uppercase text-xs">
+                                <tr>
+                                    <th class="px-6 py-3 font-medium">Service</th>
+                                    <th class="px-6 py-3 font-medium">Doctor</th>
+                                    <th class="px-6 py-3 font-medium">Date</th>
+                                    <th class="px-6 py-3 font-medium">Time</th>
+                                    <th class="px-6 py-3 font-medium">Status</th>
+                                    <th class="px-6 py-3 font-medium">Notes</th>
+                                    <th class="px-6 py-3 font-medium text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                @foreach($bookings as $booking)
+                                    <tr class="hover:bg-slate-50/60 transition">
+                                        <td class="px-6 py-4 font-medium text-slate-800">{{ $booking->service->name ?? 'N/A' }}</td>
+                                        <td class="px-6 py-4 text-slate-600">{{ $booking->service->doctor->name ?? 'N/A' }}</td>
+                                        <td class="px-6 py-4 text-slate-600">{{ $booking->date }}</td>
+                                        <td class="px-6 py-4 text-slate-600">{{ $booking->time }}</td>
+                                        <td class="px-6 py-4">
+                                            <span class="px-2.5 py-1 text-xs font-medium rounded-full
+                                                @if($booking->status == 'pending') bg-yellow-50 text-yellow-600
+                                                @elseif($booking->status == 'cancelled') bg-red-50 text-red-600
+                                                @else bg-green-50 text-green-600 @endif">
+                                                {{ ucfirst($booking->status) }}
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 text-slate-500">{{ $booking->notes ?? '—' }}</td>
+                                        <td class="px-6 py-4 text-center">
+                                            @if($booking->status !== 'cancelled')
+                                                <form action="{{ route('bookings.cancel', $booking) }}" method="POST">
+                                                    @csrf
+                                                    @method('PATCH')
+                                                    <button type="submit" onclick="return confirm('Cancel this appointment?')"
+                                                        class="text-red-600 text-xs font-medium hover:underline">
+                                                        Cancel
+                                                    </button>
+                                                </form>
+                                            @else
+                                                <span class="text-slate-400">—</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
             </div>
-        @endif
-    </x-admin.card>
-
-</div>
-
-@endsection
+        </div>
+    </div>
+</x-app-layout>

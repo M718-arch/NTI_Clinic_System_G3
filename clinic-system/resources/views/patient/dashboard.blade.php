@@ -1,57 +1,56 @@
-<!-- <x-app-layout>
+<x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">Patient Dashboard</h2>
     </x-slot>
 
     <div class="py-12">
-        <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white p-6 shadow sm:rounded-lg">
-                <p class="mb-4">Welcome, {{ Auth::user()->name }}.</p>
+        <div class="max-w-5xl mx-auto sm:px-6 lg:px-8 space-y-6">
 
-                <div class="flex gap-4">
-                    <a href="{{ route('patient.services.index') }}" class="bg-blue-600 text-white px-4 py-2 rounded-md">
+            <!-- Welcome banner -->
+            <div class="bg-gradient-to-r from-blue-600 to-blue-500 rounded-xl p-6 text-white">
+                <h3 class="text-lg font-semibold">Welcome back, {{ Auth::user()->name }}</h3>
+                <p class="text-sm text-blue-100 mt-1">Here's what you can do today.</p>
+            </div>
+
+            <div class="grid gap-6 md:grid-cols-2">
+
+                <!-- Browse services card -->
+                <div class="bg-white rounded-xl border border-slate-100 shadow-sm p-6 flex flex-col">
+                    <div class="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center mb-4">
+                        <svg class="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-base font-semibold text-slate-800 mb-1.5">Browse Medical Services</h3>
+                    <p class="text-sm text-slate-500 mb-5 flex-1">Explore available services from our doctors and book an appointment that fits your needs.</p>
+                    <a href="{{ route('patient.services.index') }}"
+                       class="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2.5 rounded-lg shadow-sm transition">
                         Browse Services
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                        </svg>
                     </a>
-                    <a href="{{ route('patient.my.bookings') }}" class="bg-gray-600 text-white px-4 py-2 rounded-md">
-    My Bookings
-</a>
                 </div>
+
+                <!-- My bookings card -->
+                <div class="bg-white rounded-xl border border-slate-100 shadow-sm p-6 flex flex-col">
+                    <div class="w-11 h-11 rounded-xl bg-green-50 flex items-center justify-center mb-4">
+                        <svg class="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-base font-semibold text-slate-800 mb-1.5">My Bookings</h3>
+                    <p class="text-sm text-slate-500 mb-5 flex-1">View, track, and manage the status of all your booked appointments in one place.</p>
+                    <a href="{{ route('patient.my.bookings') }}"
+                       class="inline-flex items-center justify-center gap-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-sm font-medium px-4 py-2.5 rounded-lg shadow-sm transition">
+                        View My Bookings
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                        </svg>
+                    </a>
+                </div>
+
             </div>
         </div>
     </div>
-</x-app-layout> -->
-@extends('admin.layouts.app')
-
-@section('title', 'Patient Dashboard')
-
-@section('content')
-
-<div class="space-y-6">
-
-    <x-admin.page-header
-        title="Patient Dashboard"
-        description="Welcome back, {{ auth()->user()->name }} 👋" />
-
-    <div class="grid gap-6 md:grid-cols-2">
-
-        <x-admin.card>
-            <h3 class="text-lg font-semibold text-slate-800 mb-2">Browse Medical Services</h3>
-            <p class="text-sm text-slate-500 mb-4">Explore available professional services and book your appointments easily.</p>
-            <x-admin.button :href="route('patient.services.index')">
-                Browse Services
-            </x-admin.button>
-        </x-admin.card>
-
-        <x-admin.card>
-            <h3 class="text-lg font-semibold text-slate-800 mb-2">My Bookings</h3>
-            <p class="text-sm text-slate-500 mb-4">View and track the status of all your booked appointments.</p>
-            <x-admin.button :href="route('patient.my.bookings')" variant="secondary">
-                View My Bookings
-            </x-admin.button>
-        </x-admin.card>
-
-    </div>
-
-</div>
-
-@endsection
+</x-app-layout>

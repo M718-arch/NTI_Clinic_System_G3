@@ -97,7 +97,11 @@
     <nav class="flex-1 space-y-2 p-4">
 
         <x-admin.sidebar-link
-            :href="route('admin.dashboard')"
+            :href="match(auth()->user()->role) {
+    'admin' => route('admin.dashboard'),
+    'doctor' => route('doctor.dashboard'),
+    'patient' => route('patient.dashboard'),
+}"
             route="admin.dashboard">
 
             <x-slot:icon>
