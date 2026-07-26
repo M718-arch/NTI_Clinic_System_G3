@@ -76,14 +76,40 @@ class AppointmentController extends Controller
         return view('doctor.services', compact('services'));
     }
 
-    public function adminAppointments()
+    public function adminAppointments(Request $request)
     {
-        $bookings = Booking::with(['patient', 'service', 'service.doctor'])
-            ->orderBy('date', 'asc')
-            ->orderBy('time', 'asc')
-            ->get();
+        $query = Booking::with(['patient', 'service', 'service.doctor']);
 
-        return view('admin.appointments', compact('bookings'));
+        if ($request->filled('search')) {
+            $search = $request->search;
+
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('patient', function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%");
+                })->orWhereHas('service', function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhereHas('doctor', function ($q) use ($search) {
+                          $q->where('name', 'like', "%{$search}%");
+                      });
+                });
+            });
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('date')) {
+            $query->whereDate('date', $request->date);
+        }
+
+        $bookings = $query
+            ->orderBy('date', 'desc')
+            ->orderBy('time', 'desc')
+            ->paginate(10)
+            ->withQueryString();
+
+        return view('admin.appointments.index', compact('bookings'));
     }
 
     public function cancel(Booking $booking)
