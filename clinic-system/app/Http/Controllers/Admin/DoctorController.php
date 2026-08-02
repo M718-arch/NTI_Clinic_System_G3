@@ -3,238 +3,147 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Doctor;
-use App\Models\Specialization;
-use Illuminate\Http\Request;
-use App\Http\Requests\StoreDoctorRequest;
-use App\Http\Requests\UpdateDoctorRequest;
 use App\Models\User;
-use Illuminate\Support\Facades\DB;
+use App\Models\Doctor;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 
 class DoctorController extends Controller
 {
-    public function index(Request $request)
+    public function index()
     {
-        $query = Doctor::with(['user', 'specialization']);
-
-        // Search
-        if ($request->filled('search')) {
-            $search = $request->search;
-
-            $query->whereHas('user', function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('phone', 'like', "%{$search}%");
-            });
-        }
-
-        // Filter by Specialization
-        if ($request->filled('specialization')) {
-            $query->where('specialization_id', $request->specialization);
-        }
-
-        // Filter by Status
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
-        $doctors = $query
-            ->latest()
-            ->paginate(10)
-            ->withQueryString();
-
-        $specializations = Specialization::orderBy('name')->get();
-
-        return view('admin.doctors.index', compact('doctors', 'specializations'));
+        $doctors = Doctor::with(['user', 'specialization'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+        
+        return response()->json($doctors);
     }
 
-
-    /**
-     * Show the form for creating a new resource.
-     */
-
-
-public function create()
-{
-    $specializations = Specialization::orderBy('name')
-    ->pluck('name', 'id');
-
-    return view('admin.doctors.create', compact('specializations'));
-}
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(StoreDoctorRequest $request)
-{
-    DB::beginTransaction();
-
-    try {
-
-        $imagePath = null;
-
-        if ($request->hasFile('image')) {
-
-            $imagePath = $request->file('image')->store('doctors', 'public');
-
-        }
-
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'phone' => $request->phone,
-            'password' => Hash::make($request->password),
-            'role' => 'doctor',
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users',
+            'password' => 'required|string|min:8',
+            'specialization_id' => 'required|exists:specializations,id',
+            'gender' => 'required|in:male,female',
+            'date_of_birth' => 'nullable|date',
+            'experience_years' => 'nullable|integer|min:0',
+            'consultation_fee' => 'nullable|numeric|min:0',
+            'address' => 'nullable|string',
+            'bio' => 'nullable|string',
+            'status' => 'boolean',
         ]);
 
-        Doctor::create([
-            'user_id' => $user->id,
-            'specialization_id' => $request->specialization_id,
-            'gender' => $request->gender,
-            'date_of_birth' => $request->date_of_birth,
-            'experience_years' => $request->experience_years,
-            'consultation_fee' => $request->consultation_fee,
-            'address' => $request->address,
-            'bio' => $request->bio,
-            'image' => $imagePath,
-            'status' => $request->boolean('status'),
+        try {
+            DB::beginTransaction();
+
+            $user = User::create([
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'password' => Hash::make($validated['password']),
+                'role' => 'doctor',
+            ]);
+
+            $doctor = Doctor::create([
+                'user_id' => $user->id,
+                'specialization_id' => $validated['specialization_id'],
+                'gender' => $validated['gender'],
+                'date_of_birth' => $validated['date_of_birth'] ?? null,
+                'experience_years' => $validated['experience_years'] ?? 0,
+                'consultation_fee' => $validated['consultation_fee'] ?? 0,
+                'address' => $validated['address'] ?? null,
+                'bio' => $validated['bio'] ?? null,
+                'status' => $validated['status'] ?? true,
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Doctor created successfully',
+                'doctor' => $doctor->load(['user', 'specialization'])
+            ], 201);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Failed to create doctor',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function show(Doctor $doctor)
+    {
+        return response()->json($doctor->load(['user', 'specialization']));
+    }
+
+    public function update(Request $request, Doctor $doctor)
+    {
+        $validated = $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'email' => 'sometimes|email|unique:users,email,' . $doctor->user_id,
+            'specialization_id' => 'sometimes|exists:specializations,id',
+            'gender' => 'sometimes|in:male,female',
+            'date_of_birth' => 'nullable|date',
+            'experience_years' => 'nullable|integer|min:0',
+            'consultation_fee' => 'nullable|numeric|min:0',
+            'address' => 'nullable|string',
+            'bio' => 'nullable|string',
+            'status' => 'boolean',
         ]);
 
-        DB::commit();
+        try {
+            DB::beginTransaction();
 
-        return redirect()
-            ->route('admin.doctors.index')
-            ->with('success', 'Doctor created successfully.');
-
-    } catch (\Exception $e) {
-
-    DB::rollBack();
-
-    if ($imagePath) {
-        Storage::disk('public')->delete($imagePath);
-    }
-
-    dd($e->getMessage());
-}
-}
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Doctor $doctor)
-{
-    $doctor->load(['user', 'specialization']);
-
-    $specializations = Specialization::orderBy('name')
-    ->pluck('name', 'id');
-
-    return view('admin.doctors.edit', compact('doctor', 'specializations'));
-}
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(UpdateDoctorRequest $request, Doctor $doctor)
-{
-    DB::beginTransaction();
-
-    try {
-
-        $doctor->load('user');
-
-        $imagePath = $doctor->image;
-
-        if ($request->hasFile('image')) {
-
-            if ($imagePath && Storage::disk('public')->exists($imagePath)) {
-                Storage::disk('public')->delete($imagePath);
+            // Update user
+            if (isset($validated['name']) || isset($validated['email'])) {
+                $doctor->user->update([
+                    'name' => $validated['name'] ?? $doctor->user->name,
+                    'email' => $validated['email'] ?? $doctor->user->email,
+                ]);
             }
 
-            $imagePath = $request->file('image')->store('doctors', 'public');
-        }
+            // Update doctor
+            $doctor->update($validated);
 
-        $doctor->user->update([
-            'name' => $request->name,
-            'email' => $request->email,
-            'phone' => $request->phone,
-        ]);
+            DB::commit();
 
-        if ($request->filled('password')) {
-
-            $doctor->user->update([
-                'password' => Hash::make($request->password),
+            return response()->json([
+                'message' => 'Doctor updated successfully',
+                'doctor' => $doctor->fresh()->load(['user', 'specialization'])
             ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Failed to update doctor',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        $doctor->update([
-            'specialization_id' => $request->specialization_id,
-            'gender' => $request->gender,
-            'date_of_birth' => $request->date_of_birth,
-            'experience_years' => $request->experience_years,
-            'consultation_fee' => $request->consultation_fee,
-            'address' => $request->address,
-            'bio' => $request->bio,
-            'image' => $imagePath,
-            'status' => $request->boolean('status'),
-        ]);
-
-        DB::commit();
-
-        return redirect()
-            ->route('admin.doctors.index')
-            ->with('success', 'Doctor updated successfully.');
-
-    } catch (\Exception $e) {
-
-        DB::rollBack();
-
-        throw $e;
     }
-}
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(Doctor $doctor)
-{
-    DB::beginTransaction();
+    {
+        try {
+            DB::beginTransaction();
+            
+            $doctor->user()->delete();
+            $doctor->delete();
+            
+            DB::commit();
 
-    try {
+            return response()->json([
+                'message' => 'Doctor deleted successfully'
+            ]);
 
-        $doctor->load('user');
-
-        if ($doctor->image) {
-
-            Storage::disk('public')->delete($doctor->image);
-
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Failed to delete doctor',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        $doctor->delete();
-
-        $doctor->user->delete();
-
-        DB::commit();
-
-        return redirect()
-            ->route('admin.doctors.index')
-            ->with('success', 'Doctor deleted successfully.');
-
-    } catch (\Exception $e) {
-
-        DB::rollBack();
-
-        throw $e;
-
     }
-}
 }

@@ -6,19 +6,22 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-   public function up(): void
-{
-    Schema::create('services', function (Blueprint $table) {
-        $table->id();
-        $table->foreignId('doctor_id')->constrained('users')->onDelete('cascade');
-        $table->string('name');
-        $table->text('description')->nullable();
-        $table->timestamps();
-    });
-}
+    public function up()
+    {
+        Schema::create('services', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('doctor_id')->constrained('doctors')->onDelete('cascade');
+            $table->string('name');
+            $table->text('description')->nullable();
+            $table->decimal('price', 10, 2);
+            $table->integer('duration')->comment('Duration in minutes');
+            $table->boolean('is_active')->default(true);
+            $table->timestamps();
+        });
+    }
 
-public function down(): void
-{
-    Schema::dropIfExists('services');
-}
+    public function down()
+    {
+        Schema::dropIfExists('services');
+    }
 };

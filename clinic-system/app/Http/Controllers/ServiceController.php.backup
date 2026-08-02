@@ -1,0 +1,130 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Models\Service;
+use Illuminate\Http\Request;
+
+class ServiceController extends Controller
+{
+    /**
+     * Doctor: List their services with booking counts
+     */
+    public function myServices(Request $request)
+    {
+        $services = Service::where('doctor_id', $request->user()->id)
+            ->withCount('bookings')
+            ->with(['bookings' => function($query) {
+                $query->with(['patient.user'])
+                    ->where('status', '!=', 'cancelled');
+            }])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'services' => $services,
+            'total' => $services->count()
+        ]);
+    }
+
+    /**
+     * Doctor: Create a new service
+     */
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+        ]);
+
+        $service = Service::create([
+            'doctor_id' => $request->user()->id,
+            'name' => $validated['name'],
+            'description' => $validated['description'] ?? null,
+        ]);
+
+        return response()->json([
+            'message' => 'Service created successfully',
+            'service' => $service
+        ], 201);
+    }
+
+    /**
+     * Doctor: Update a service
+     */
+    public function update(Request $request, Service $service)
+    {
+        if ($service->doctor_id !== $request->user()->id) {
+            return response()->json([
+                'message' => 'Unauthorized'
+            ], 403);
+        }
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+        ]);
+
+        $service->update($validated);
+
+        return response()->json([
+            'message' => 'Service updated successfully',
+            'service' => $service
+        ]);
+    }
+
+    /**
+     * Doctor: Delete a service
+     */
+    public function destroy(Request $request, Service $service)
+    {
+        if ($service->doctor_id !== $request->user()->id) {
+            return response()->json([
+                'message' => 'Unauthorized'
+            ], 403);
+        }
+
+        // Check if service has bookings
+        if ($service->bookings()->exists()) {
+            return response()->json([
+                'message' => 'Cannot delete service with existing bookings'
+            ], 409);
+        }
+
+        $service->delete();
+
+        return response()->json([
+            'message' => 'Service deleted successfully'
+        ]);
+    }
+
+    /**
+     * Patient: Browse all services with doctor info
+     */
+    public function index(Request $request)
+    {
+        $services = Service::with([
+            'doctor.user',
+            'doctor.specialization'
+        ])
+        ->withCount('bookings')
+        ->orderBy('created_at', 'desc')
+        ->get();
+
+        return response()->json([
+            'services' => $services,
+            'total' => $services->count()
+        ]);
+    }
+
+    /**
+     * Patient: Get a single service with details
+     */
+    public function show(Service $service)
+    {
+        return response()->json(
+            $service->load(['doctor.user', 'doctor.specialization', 'bookings'])
+        );
+    }
+}

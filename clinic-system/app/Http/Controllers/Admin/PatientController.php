@@ -1,167 +1,149 @@
 <?php
 
 namespace App\Http\Controllers\Admin;
-use Illuminate\Http\Request;
+
 use App\Http\Controllers\Controller;
-use App\Models\Patient;
-use App\Http\Requests\StorePatientRequest;
 use App\Models\User;
-use Illuminate\Support\Facades\DB;
+use App\Models\Patient;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use App\Http\Requests\UpdatePatientRequest;
+use Illuminate\Support\Facades\DB;
+
 class PatientController extends Controller
 {
     public function index()
     {
-        $patients = Patient::with('user')
-            ->when(request('search'), function ($query) {
-                $query->whereHas('user', function ($q) {
-                    $q->where('name', 'like', '%' . request('search') . '%')
-                      ->orWhere('email', 'like', '%' . request('search') . '%')
-                      ->orWhere('phone', 'like', '%' . request('search') . '%');
-                });
-            })
-            ->when(request()->filled('status'), function ($query) {
-                $query->where('status', request('status'));
-            })
-            ->latest()
-            ->paginate(10)
-            ->withQueryString();
-
-        return view('admin.patients.index', compact('patients'));
+        $patients = Patient::with(['user'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+        
+        return response()->json($patients);
     }
 
-    public function create()
+    public function store(Request $request)
     {
-        return view('admin.patients.create');
-    }
-
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(StorePatientRequest $request)
-{
-    DB::beginTransaction();
-
-    try {
-
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'phone' => $request->phone,
-            'password' => Hash::make($request->password),
-            'role' => 'patient',
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users',
+            'password' => 'required|string|min:8',
+            'gender' => 'nullable|in:male,female',
+            'date_of_birth' => 'nullable|date',
+            'blood_group' => 'nullable|in:A+,A-,B+,B-,AB+,AB-,O+,O-',
+            'address' => 'nullable|string',
+            'emergency_contact_name' => 'nullable|string',
+            'emergency_contact_phone' => 'nullable|string',
+            'medical_history' => 'nullable|string',
+            'status' => 'boolean',
         ]);
 
-        Patient::create([
-            'user_id' => $user->id,
-            'gender' => $request->gender,
-            'date_of_birth' => $request->date_of_birth,
-            'blood_group' => $request->blood_group,
-            'address' => $request->address,
-            'emergency_contact_name' => $request->emergency_contact_name,
-            'emergency_contact_phone' => $request->emergency_contact_phone,
-            'medical_history' => $request->medical_history,
-            'status' => $request->status,
-        ]);
+        try {
+            DB::beginTransaction();
 
-        DB::commit();
-
-        return redirect()
-            ->route('admin.patients.index')
-            ->with('success', 'Patient created successfully.');
-
-    } catch (\Exception $e) {
-
-        DB::rollBack();
-
-        return back()
-            ->withInput()
-            ->with('error', $e->getMessage());
-    }
-}
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Patient $patient)
-{
-    $patient->load('user');
-
-    return view('admin.patients.edit', compact('patient'));
-}
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(UpdatePatientRequest $request, Patient $patient)
-{
-    DB::beginTransaction();
-
-    try {
-
-        $user = $patient->user;
-
-        $user->update([
-            'name' => $request->name,
-            'email' => $request->email,
-            'phone' => $request->phone,
-        ]);
-
-        if ($request->filled('password')) {
-
-            $user->update([
-                'password' => Hash::make($request->password),
+            $user = User::create([
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'password' => Hash::make($validated['password']),
+                'role' => 'patient',
             ]);
 
-        }
+            $patient = Patient::create([
+                'user_id' => $user->id,
+                'gender' => $validated['gender'] ?? null,
+                'date_of_birth' => $validated['date_of_birth'] ?? null,
+                'blood_group' => $validated['blood_group'] ?? null,
+                'address' => $validated['address'] ?? null,
+                'emergency_contact_name' => $validated['emergency_contact_name'] ?? null,
+                'emergency_contact_phone' => $validated['emergency_contact_phone'] ?? null,
+                'medical_history' => $validated['medical_history'] ?? null,
+                'status' => $validated['status'] ?? true,
+            ]);
 
-        $patient->update([
-            'gender' => $request->gender,
-            'date_of_birth' => $request->date_of_birth,
-            'blood_group' => $request->blood_group,
-            'address' => $request->address,
-            'emergency_contact_name' => $request->emergency_contact_name,
-            'emergency_contact_phone' => $request->emergency_contact_phone,
-            'medical_history' => $request->medical_history,
-            'status' => $request->status,
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Patient created successfully',
+                'patient' => $patient->load(['user'])
+            ], 201);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Failed to create patient',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function show(Patient $patient)
+    {
+        return response()->json($patient->load(['user']));
+    }
+
+    public function update(Request $request, Patient $patient)
+    {
+        $validated = $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'email' => 'sometimes|email|unique:users,email,' . $patient->user_id,
+            'gender' => 'nullable|in:male,female',
+            'date_of_birth' => 'nullable|date',
+            'blood_group' => 'nullable|in:A+,A-,B+,B-,AB+,AB-,O+,O-',
+            'address' => 'nullable|string',
+            'emergency_contact_name' => 'nullable|string',
+            'emergency_contact_phone' => 'nullable|string',
+            'medical_history' => 'nullable|string',
+            'status' => 'boolean',
         ]);
 
-        DB::commit();
+        try {
+            DB::beginTransaction();
 
-        return redirect()
-            ->route('admin.patients.index')
-            ->with('success', 'Patient updated successfully.');
+            // Update user
+            if (isset($validated['name']) || isset($validated['email'])) {
+                $patient->user->update([
+                    'name' => $validated['name'] ?? $patient->user->name,
+                    'email' => $validated['email'] ?? $patient->user->email,
+                ]);
+            }
 
-    } catch (\Exception $e) {
+            // Update patient
+            $patient->update($validated);
 
-        DB::rollBack();
+            DB::commit();
 
-        return back()
-            ->withInput()
-            ->with('error', $e->getMessage());
+            return response()->json([
+                'message' => 'Patient updated successfully',
+                'patient' => $patient->fresh()->load(['user'])
+            ]);
 
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Failed to update patient',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
-}
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(Patient $patient)
-{
-    $patient->user()->delete();
+    {
+        try {
+            DB::beginTransaction();
+            
+            $patient->user()->delete();
+            $patient->delete();
+            
+            DB::commit();
 
-    return redirect()
-        ->route('admin.patients.index')
-        ->with('success', 'Patient deleted successfully.');
-}
+            return response()->json([
+                'message' => 'Patient deleted successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Failed to delete patient',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

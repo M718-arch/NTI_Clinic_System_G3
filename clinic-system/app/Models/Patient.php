@@ -3,20 +3,33 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
+
 class Patient extends Model
 {
-    use HasFactory;
     protected $fillable = [
         'user_id',
+        'first_name',
+        'last_name',
+        'email',
+        'phone',
         'gender',
         'date_of_birth',
         'blood_group',
         'address',
         'emergency_contact_name',
         'emergency_contact_phone',
+        'allergies',
+        'chronic_diseases',
+        'current_medications',
+        'lifestyle_habits',
         'medical_history',
+        'diagnoses',
+        'family_history',
+        'past_surgeries',
         'status',
+        'photo',  // ← MUST BE HERE
     ];
 
     protected $casts = [
@@ -24,8 +37,26 @@ class Patient extends Model
         'status' => 'boolean',
     ];
 
-    public function user()
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function bookings()
+    {
+        return $this->hasMany(Booking::class, 'patient_id');
+    }
+
+    public function getFullNameAttribute()
+    {
+        return trim($this->first_name . ' ' . $this->last_name);
+    }
+
+    public function getPhotoUrlAttribute()
+    {
+        if ($this->photo && Storage::disk('public')->exists($this->photo)) {
+            return asset('storage/' . $this->photo);
+        }
+        return null;
     }
 }

@@ -4,7 +4,6 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\AppointmentController;
-
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DoctorController;
 use App\Http\Controllers\Admin\PatientController;
@@ -21,15 +20,18 @@ Route::get('/', function () {
 })->name('home');
 
 Route::get('/dashboard', function () {
-    $user = auth();
+    $user = auth()->user();
 
-    if ($user->role() === 'admin') {
-        return redirect()->route('admin.dashboard');
-    } elseif ($user->role() === 'doctor') {
-        return redirect()->route('doctor.dashboard');
+    if (!$user) {
+        return redirect()->route('login');
     }
 
-    return redirect()->route('patient.dashboard');
+    return match($user->role) {
+        'admin' => redirect()->route('admin.dashboard'),
+        'doctor' => redirect()->route('doctor.dashboard'),
+        'patient' => redirect()->route('patient.dashboard'),
+        default => redirect('/'),
+    };
 })->middleware(['auth'])->name('dashboard');
 
 /*
@@ -42,13 +44,13 @@ Route::middleware(['auth'])->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | Booking actions shared across roles (auth handled inside controller)
+    | Booking actions shared across roles
     |--------------------------------------------------------------------------
     */
 
     Route::patch('/bookings/{booking}/cancel', [AppointmentController::class, 'cancel'])
         ->name('bookings.cancel');
-        Route::patch('/bookings/{booking}/accept', [AppointmentController::class, 'accept'])
+    Route::patch('/bookings/{booking}/accept', [AppointmentController::class, 'accept'])
         ->name('bookings.accept');
 
     /*
@@ -61,12 +63,11 @@ Route::middleware(['auth'])->group(function () {
         ->name('admin.')
         ->middleware('role:admin')
         ->group(function () {
-
-            Route::get('/', [DashboardController::class, 'index'])
-                ->name('dashboard');
+            Route::get('/{any?}', function () {
+                return view('patient.dashboard');
+            })->where('any', '.*')->name('dashboard');
 
             Route::resource('doctors', DoctorController::class);
-
             Route::resource('patients', PatientController::class);
 
             Route::get('/appointments', [AppointmentController::class, 'adminAppointments'])
@@ -86,30 +87,15 @@ Route::middleware(['auth'])->group(function () {
         ->name('doctor.')
         ->middleware('role:doctor')
         ->group(function () {
-
-            Route::get('/', [ServiceController::class, 'myServices'])
-                ->name('dashboard');
-
-            Route::get('/services/create', [ServiceController::class, 'create'])
-                ->name('services.create');
-
-            Route::post('/services', [ServiceController::class, 'store'])
-                ->name('services.store');
-
-            Route::get('/bookings', [AppointmentController::class, 'doctorBookings'])
-                ->name('bookings.index');
-            Route::delete('/services/{service}', [ServiceController::class, 'destroy'])
-                ->name('services.destroy');
-            Route::get('/services/{service}/edit', [ServiceController::class, 'edit'])
-                ->name('services.edit');
-
-        Route::put('/services/{service}', [ServiceController::class, 'update'])
-            ->name('services.update');
+            // Catch-all route for React - must be last
+            Route::get('/{any?}', function () {
+                return view('patient.dashboard');
+            })->where('any', '.*')->name('dashboard');
         });
 
     /*
     |--------------------------------------------------------------------------
-    | Patient Routes
+    | Patient Routes (React)
     |--------------------------------------------------------------------------
     */
 
@@ -117,27 +103,11 @@ Route::middleware(['auth'])->group(function () {
         ->name('patient.')
         ->middleware('role:patient')
         ->group(function () {
-
-            Route::view('/', 'patient.dashboard')
-                ->name('dashboard');
-
-            Route::get('/services', [ServiceController::class, 'index'])
-                ->name('services.index');
-
-            Route::get('/book/{service}', [AppointmentController::class, 'create'])
-                ->name('book.create');
-
-            Route::post('/book/{service}', [AppointmentController::class, 'store'])
-                ->name('book.store');
-
-            Route::get('/my-bookings', [AppointmentController::class, 'myBookings'])
-                ->name('my.bookings');
-            Route::get('/my-bookings/{booking}/edit', [AppointmentController::class, 'edit'])
-    ->name('bookings.edit');
-
-Route::put('/my-bookings/{booking}', [AppointmentController::class, 'update'])
-    ->name('bookings.update');
-});
+            // Catch-all route for React - must be last
+            Route::get('/{any?}', function () {
+                return view('patient.dashboard');
+            })->where('any', '.*')->name('dashboard');
+        });
 
     /*
     |--------------------------------------------------------------------------
