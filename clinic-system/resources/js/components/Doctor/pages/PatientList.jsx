@@ -5,6 +5,31 @@ import { Badge } from '../components/Badge';
 import api from '../../../api/client';
 import { useAuth } from '../../../context/AuthContext';
 
+// Shared avatar: shows the patient's real photo if present, falls back to
+// initials on a colored circle otherwise (also falls back if the image URL
+// 404s/fails to load, e.g. stale photo_url after a file was deleted).
+const PatientAvatar = ({ patient, sizeClass = 'w-8 h-8', textClass = 'text-xs' }) => {
+    const [imgFailed, setImgFailed] = useState(false);
+    const initials = patient?.name?.charAt(0) || 'P';
+
+    if (patient?.photo_url && !imgFailed) {
+        return (
+            <img
+                src={patient.photo_url}
+                alt={patient.name || 'Patient'}
+                className={`${sizeClass} rounded-full object-cover shrink-0`}
+                onError={() => setImgFailed(true)}
+            />
+        );
+    }
+
+    return (
+        <div className={`${sizeClass} rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 flex items-center justify-center text-white font-bold shrink-0 ${textClass}`}>
+            {initials}
+        </div>
+    );
+};
+
 export const PatientList = () => {
     const { user } = useAuth();
     const [patients, setPatients] = useState([]);
@@ -126,9 +151,7 @@ export const PatientList = () => {
                                     <tr key={patient.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/60">
                                         <td className="py-3 pl-5 pr-3">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 flex items-center justify-center text-white text-xs font-bold">
-                                                    {patient.name?.charAt(0) || 'P'}
-                                                </div>
+                                                <PatientAvatar patient={patient} sizeClass="w-8 h-8" textClass="text-xs" />
                                                 <span className="font-semibold text-slate-800">{patient.name || 'Unknown'}</span>
                                             </div>
                                         </td>
@@ -198,9 +221,7 @@ export const PatientList = () => {
                         </div>
                         <div className="space-y-4">
                             <div className="flex items-center gap-4">
-                                <div className="w-16 h-16 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 flex items-center justify-center text-white text-2xl font-bold">
-                                    {selectedPatient.name?.charAt(0) || 'P'}
-                                </div>
+                                <PatientAvatar patient={selectedPatient} sizeClass="w-16 h-16" textClass="text-2xl" />
                                 <div>
                                     <h4 className="font-semibold text-slate-800">{selectedPatient.name || 'Unknown'}</h4>
                                     <p className="text-sm text-slate-500">{selectedPatient.email || 'No email'}</p>

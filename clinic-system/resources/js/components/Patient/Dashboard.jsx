@@ -101,11 +101,6 @@ const PatientDashboard = () => {
         return `${hour12}:${minutes} ${ampm}`;
     };
 
-    const totalPercent = Math.min((stats.total / 10) * 100, 100);
-    const pendingPercent = Math.min((stats.pending / 10) * 100, 100);
-    const confirmedPercent = Math.min((stats.confirmed / 10) * 100, 100);
-    const completedPercent = Math.min((stats.completed / 10) * 100, 100);
-
     if (loading) {
         return (
             <div className="flex flex-col justify-center items-center min-h-[500px]">
@@ -174,9 +169,6 @@ const PatientDashboard = () => {
                             <Calendar className="w-5 h-5 text-blue-600" />
                         </div>
                     </div>
-                    <div className="mt-3 w-full h-1.5 bg-blue-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-blue-600 rounded-full transition-all duration-500" style={{ width: totalPercent + '%' }}></div>
-                    </div>
                 </div>
                 
                 <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer group">
@@ -188,9 +180,6 @@ const PatientDashboard = () => {
                         <div className="w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
                             <ClockIcon className="w-5 h-5 text-amber-600" />
                         </div>
-                    </div>
-                    <div className="mt-3 w-full h-1.5 bg-amber-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-amber-500 rounded-full transition-all duration-500" style={{ width: pendingPercent + '%' }}></div>
                     </div>
                 </div>
                 
@@ -204,9 +193,6 @@ const PatientDashboard = () => {
                             <CheckCircle className="w-5 h-5 text-emerald-600" />
                         </div>
                     </div>
-                    <div className="mt-3 w-full h-1.5 bg-emerald-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-emerald-500 rounded-full transition-all duration-500" style={{ width: confirmedPercent + '%' }}></div>
-                    </div>
                 </div>
                 
                 <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer group">
@@ -218,9 +204,6 @@ const PatientDashboard = () => {
                         <div className="w-10 h-10 bg-slate-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
                             <TrendingUp className="w-5 h-5 text-slate-600" />
                         </div>
-                    </div>
-                    <div className="mt-3 w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-slate-600 rounded-full transition-all duration-500" style={{ width: completedPercent + '%' }}></div>
                     </div>
                 </div>
             </div>

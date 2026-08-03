@@ -131,8 +131,10 @@ const Layout = ({ children }) => {
                     </div>
                 </div>
             </nav>
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                {React.Children.map(children, child => {
+            <main className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 ${
+    onMessagesPage ? 'h-[calc(100vh-4rem)] flex flex-col overflow-hidden' : ''
+}`}>
+    {React.Children.map(children, child => {
                     if (React.isValidElement(child)) {
                         return React.cloneElement(child, { updateUnreadCount });
                     }

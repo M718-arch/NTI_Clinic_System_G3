@@ -60,7 +60,7 @@ class PatientController extends Controller
     {
         try {
             $patient = Patient::where('user_id', Auth::id())->first();
-            
+
             if (!$patient) {
                 return response()->json([
                     'total' => 0,
@@ -72,7 +72,7 @@ class PatientController extends Controller
             }
 
             $bookings = Booking::where('patient_id', $patient->id);
-            
+
             return response()->json([
                 'total' => $bookings->count(),
                 'pending' => (clone $bookings)->where('status', 'pending')->count(),
@@ -191,7 +191,7 @@ class PatientController extends Controller
 
             // Store new photo
             $path = $request->file('photo')->store('patient-photos', 'public');
-            
+
             // Update the patient record
             $patient->update(['photo' => $path]);
 
@@ -254,7 +254,7 @@ class PatientController extends Controller
     {
         try {
             \Log::info('getDoctors called');
-            
+
             $doctors = Doctor::with(['user', 'specialization'])
                 ->where('status', true)
                 ->get();
@@ -262,10 +262,20 @@ class PatientController extends Controller
             \Log::info('Doctors found: ' . $doctors->count());
 
             $formattedDoctors = $doctors->map(function($doctor) {
+                // Build a full, usable image URL (or a UI Avatars fallback)
+                // instead of returning the raw storage path.
+                $name = $doctor->user->name ?? trim($doctor->first_name . ' ' . $doctor->last_name);
+
+                if ($doctor->image) {
+                    $imageUrl = asset('storage/' . $doctor->image);
+                } else {
+                    $imageUrl = 'https://ui-avatars.com/api/?name=' . urlencode($name) . '&background=random&size=128&bold=true';
+                }
+
                 return [
                     'id' => $doctor->id,
                     'user_id' => $doctor->user_id,
-                    'name' => $doctor->user->name ?? $doctor->first_name . ' ' . $doctor->last_name,
+                    'name' => $name,
                     'first_name' => $doctor->first_name,
                     'last_name' => $doctor->last_name,
                     'email' => $doctor->email ?? $doctor->user->email,
@@ -279,6 +289,8 @@ class PatientController extends Controller
                     'address' => $doctor->address,
                     'bio' => $doctor->bio,
                     'image' => $doctor->image,
+                    'image_url' => $imageUrl,
+                    'avatar' => $imageUrl,
                     'operating_hours' => $doctor->operating_hours,
                     'services_count' => $doctor->services()->count(),
                     'is_available' => $doctor->status ?? true,
@@ -304,7 +316,7 @@ class PatientController extends Controller
     {
         try {
             $doctor = Doctor::with(['user', 'specialization'])->find($doctorId);
-            
+
             if (!$doctor) {
                 return response()->json([
                     'message' => 'Doctor not found'
@@ -369,7 +381,7 @@ class PatientController extends Controller
     public function recentActivity(Request $request)
     {
         $patient = Patient::where('user_id', Auth::id())->first();
-        
+
         if (!$patient) {
             return response()->json([]);
         }
@@ -422,7 +434,7 @@ class PatientController extends Controller
     public function visits(Request $request)
     {
         $patient = Patient::where('user_id', Auth::id())->first();
-        
+
         if (!$patient) {
             return response()->json([
                 'future' => [],

@@ -14,41 +14,31 @@ use Illuminate\Validation\ValidationException;
 
 class DoctorController extends Controller
 {
-    /**
-     * Get the authenticated doctor's profile
-     */
-    public function profile(Request $request)
-    {
-        try {
-            $user = $request->user();
-            
-            if (!$user) {
-                return response()->json([
-                    'message' => 'User not authenticated'
-                ], 401);
-            }
-
-            $doctor = $user->doctor;
-
-            if (!$doctor) {
-                return response()->json([
-                    'message' => 'Doctor profile not found. Please contact admin.'
-                ], 404);
-            }
-
-            // Load specialization relationship
-            $doctor->load('specialization');
-
-            return response()->json($doctor);
-
-        } catch (\Exception $e) {
-            \Log::error('Profile fetch error: ' . $e->getMessage());
-            return response()->json([
-                'message' => 'Error fetching profile',
-                'error' => $e->getMessage()
-            ], 500);
+  public function profile(Request $request)
+{
+    try {
+        $user = $request->user();
+        $doctor = $user->doctor()->with('specialization')->firstOrFail();
+        
+        // Debug - check if image exists
+        if ($doctor->image) {
+            $exists = Storage::disk('public')->exists($doctor->image);
+            \Log::info('Image check:', [
+                'path' => $doctor->image,
+                'exists' => $exists,
+                'url' => $doctor->image_url
+            ]);
         }
+        
+        return response()->json($doctor);
+
+    } catch (\Exception $e) {
+        \Log::error('Profile fetch error: ' . $e->getMessage());
+        return response()->json([
+            'message' => 'Error fetching profile'
+        ], 500);
     }
+}
     /**
      * Update the doctor's profile
      */
@@ -295,7 +285,6 @@ public function getPatients(Request $request)
             ], 404);
         }
 
-        // Get all patients with their visit counts
         $patients = $doctor->appointments()
             ->with('patient.user')
             ->whereNotNull('patient_id')
@@ -305,13 +294,26 @@ public function getPatients(Request $request)
                 $patient = $appointments->first()->patient;
                 $user = $patient->user;
                 
+                // Get patient image URL or generate UI Avatar
+                $imageUrl = null;
+if ($patient->photo) {
+    $imageUrl = asset('storage/' . $patient->photo);
+} else {
+                    // Generate UI Avatar if no image exists
+                    $name = $user->name ?? 'Patient';
+                    $imageUrl = 'https://ui-avatars.com/api/?name=' . urlencode($name) . '&background=random&size=128&bold=true';
+                }
+                
                 return [
                     'id' => $patient->id,
-                    'user_id' => $user->id ?? null,  // ← Add this line
+                    'user_id' => $user->id ?? null,
                     'name' => $user->name ?? 'Unknown',
                     'email' => $user->email ?? '',
                     'phone' => $patient->phone ?? '',
                     'date_of_birth' => $patient->date_of_birth ?? null,
+                    'image_url' => $imageUrl,
+                    'avatar' => $imageUrl,
+                    'photo_url' => $imageUrl,
                     'total_visits' => $appointments->count(),
                     'last_visit' => $appointments->sortByDesc('appointment_date')->first()->appointment_date ?? null,
                     'first_visit' => $appointments->sortBy('appointment_date')->first()->appointment_date ?? null,
@@ -329,78 +331,76 @@ public function getPatients(Request $request)
         ], 500);
     }
 }
-
     /**
-     * Upload doctor image
-     */
-    public function uploadImage(Request $request)
-    {
-        try {
-            $doctor = $request->user()->doctor;
+ * Upload doctor image
+ */
+public function uploadImage(Request $request)
+{
+    try {
+        $doctor = $request->user()->doctor;
 
-            if (!$doctor) {
-                return response()->json([
-                    'message' => 'Doctor profile not found'
-                ], 404);
-            }
-
-            $request->validate([
-                'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048'
-            ]);
-
-            if ($doctor->image && Storage::disk('public')->exists($doctor->image)) {
-                Storage::disk('public')->delete($doctor->image);
-            }
-
-            $path = $request->file('image')->store('doctor-images', 'public');
-            $doctor->update(['image' => $path]);
-
+        if (!$doctor) {
             return response()->json([
-                'message' => 'Image uploaded successfully',
-                'image_url' => Storage::url($path)
-            ]);
-
-        } catch (\Exception $e) {
-            \Log::error('Image upload error: ' . $e->getMessage());
-            return response()->json([
-                'message' => 'Error uploading image',
-                'error' => $e->getMessage()
-            ], 500);
+                'message' => 'Doctor profile not found'
+            ], 404);
         }
-    }
 
-    /**
-     * Delete doctor image
-     */
-    public function deleteImage(Request $request)
-    {
-        try {
-            $doctor = $request->user()->doctor;
+        $request->validate([
+            'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048'
+        ]);
 
-            if (!$doctor) {
-                return response()->json([
-                    'message' => 'Doctor profile not found'
-                ], 404);
-            }
-
-            if ($doctor->image && Storage::disk('public')->exists($doctor->image)) {
-                Storage::disk('public')->delete($doctor->image);
-                $doctor->update(['image' => null]);
-            }
-
-            return response()->json([
-                'message' => 'Image deleted successfully'
-            ]);
-
-        } catch (\Exception $e) {
-            \Log::error('Image delete error: ' . $e->getMessage());
-            return response()->json([
-                'message' => 'Error deleting image',
-                'error' => $e->getMessage()
-            ], 500);
+        if ($doctor->image && Storage::disk('public')->exists($doctor->image)) {
+            Storage::disk('public')->delete($doctor->image);
         }
-    }
 
+        $path = $request->file('image')->store('doctor-images', 'public');
+        $doctor->update(['image' => $path]);
+
+        return response()->json([
+            'message' => 'Image uploaded successfully',
+            'image_url' => Storage::url($path)
+        ]);
+
+    } catch (\Exception $e) {
+        \Log::error('Image upload error: ' . $e->getMessage());
+        return response()->json([
+            'message' => 'Error uploading image',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
+
+/**
+ * Delete doctor image
+ */
+public function deleteImage(Request $request)
+{
+    try {
+        $doctor = $request->user()->doctor;
+
+        if (!$doctor) {
+            return response()->json([
+                'message' => 'Doctor profile not found'
+            ], 404);
+        }
+
+        if ($doctor->image && Storage::disk('public')->exists($doctor->image)) {
+            Storage::disk('public')->delete($doctor->image);
+            $doctor->update(['image' => null]);
+        }
+
+        return response()->json([
+            'message' => 'Image deleted successfully'
+        ]);
+
+    } catch (\Exception $e) {
+        \Log::error('Image delete error: ' . $e->getMessage());
+        return response()->json([
+            'message' => 'Error deleting image',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
     /**
      * Update notification preferences
      */

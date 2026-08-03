@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Facades\Storage;
 
 class Doctor extends Model
 {
@@ -22,7 +23,7 @@ class Doctor extends Model
         'consultation_fee',
         'address',
         'bio',
-        'image',
+        'image', 
         'status',
         'clinic_name',
         'branch',
@@ -36,6 +37,11 @@ class Doctor extends Model
         'status' => 'boolean',
     ];
 
+    protected $appends = [
+        'full_name',
+        'image_url',
+    ];
+
     public function user()
     {
         return $this->belongsTo(User::class);
@@ -46,7 +52,6 @@ class Doctor extends Model
         return $this->belongsTo(Specialization::class);
     }
 
-    // ADD THIS RELATIONSHIP
     public function appointments()
     {
         return $this->hasMany(Booking::class, 'doctor_id');
@@ -64,8 +69,21 @@ class Doctor extends Model
 
     public function getImageUrlAttribute()
     {
-        if ($this->image) {
-            return asset('storage/' . $this->image);
+        if ($this->image && Storage::disk('public')->exists($this->image)) {
+            // Force the URL to include port 8000
+            $appUrl = config('app.url');
+            
+            // If the URL is localhost without port, add :8000
+            if (str_contains($appUrl, 'localhost') && !str_contains($appUrl, ':')) {
+                $appUrl = 'http://localhost:8000';
+            }
+            
+            // Ensure trailing slash
+            if (!str_ends_with($appUrl, '/')) {
+                $appUrl .= '/';
+            }
+            
+            return $appUrl . 'storage/' . $this->image;
         }
         return null;
     }

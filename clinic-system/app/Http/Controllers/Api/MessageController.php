@@ -6,65 +6,72 @@ use App\Http\Controllers\Controller;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\User;
+use App\Models\Patient;
+use App\Models\Doctor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class MessageController extends Controller
 {
     /**
- * Get all conversations for the authenticated user
- */
-public function conversations(Request $request)
-{
-    try {
-        $user = $request->user();
-        
-        $conversations = Conversation::where('user1_id', $user->id)
-            ->orWhere('user2_id', $user->id)
-            ->with(['user1', 'user2'])
-            ->get()
-            ->map(function($conversation) use ($user) {
-                $otherUser = $conversation->user1_id === $user->id 
-                    ? $conversation->user2 
-                    : $conversation->user1;
-                
-                $lastMessage = Message::where('conversation_id', $conversation->id)
-                    ->latest()
-                    ->first();
-                
-                return [
-                    'id' => $conversation->id,
-                    'other_user' => [
-                        'id' => $otherUser->id,
-                        'name' => $otherUser->name,
-                        'email' => $otherUser->email,
-                        'avatar' => $otherUser->avatar ?? null,
-                        'role' => $otherUser->role,
-                    ],
-                    'last_message' => $lastMessage ? $lastMessage->content : null,
-                    'last_message_time' => $lastMessage ? $lastMessage->created_at : null,
-                    'unread_count' => Message::where('conversation_id', $conversation->id)
-                        ->where('receiver_id', $user->id)
-                        ->where('is_read', false)
-                        ->count(),
-                ];
-            })
-            ->filter(function($conversation) {
-                return $conversation['other_user'] !== null;
-            })
-            ->sortByDesc('last_message_time')
-            ->values();
+     * Get all conversations for the authenticated user
+     */
+    public function conversations(Request $request)
+    {
+        try {
+            $user = $request->user();
+            
+            $conversations = Conversation::where('user1_id', $user->id)
+                ->orWhere('user2_id', $user->id)
+                ->with(['user1', 'user2'])
+                ->get()
+                ->map(function($conversation) use ($user) {
+                    $otherUser = $conversation->user1_id === $user->id 
+                        ? $conversation->user2 
+                        : $conversation->user1;
+                    
+                    $lastMessage = Message::where('conversation_id', $conversation->id)
+                        ->latest()
+                        ->first();
+                    
+                    // Get the other user's avatar/image URL
+                    $avatarUrl = $this->getUserAvatarUrl($otherUser);
+                    
+                    return [
+                        'id' => $conversation->id,
+                        'other_user' => [
+                            'id' => $otherUser->id,
+                            'name' => $otherUser->name,
+                            'email' => $otherUser->email,
+                            'avatar' => $avatarUrl,
+                            'image_url' => $avatarUrl,
+                            'role' => $otherUser->role,
+                        ],
+                        'last_message' => $lastMessage ? $lastMessage->content : null,
+                        'last_message_time' => $lastMessage ? $lastMessage->created_at : null,
+                        'unread_count' => Message::where('conversation_id', $conversation->id)
+                            ->where('receiver_id', $user->id)
+                            ->where('is_read', false)
+                            ->count(),
+                    ];
+                })
+                ->filter(function($conversation) {
+                    return $conversation['other_user'] !== null;
+                })
+                ->sortByDesc('last_message_time')
+                ->values();
 
-        return response()->json($conversations);
+            return response()->json($conversations);
 
-    } catch (\Exception $e) {
-        \Log::error('Conversations error: ' . $e->getMessage());
-        return response()->json([
-            'message' => 'Error fetching conversations',
-            'error' => $e->getMessage()
-        ], 500);
+        } catch (\Exception $e) {
+            \Log::error('Conversations error: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Error fetching conversations',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
-}
 
     /**
      * Get messages for a specific conversation
@@ -86,6 +93,9 @@ public function conversations(Request $request)
                 ->orderBy('created_at', 'asc')
                 ->get()
                 ->map(function($message) use ($user) {
+                    // Get sender avatar URL
+                    $senderAvatar = $this->getUserAvatarUrl($message->sender);
+                    
                     return [
                         'id' => $message->id,
                         'content' => $message->content,
@@ -94,6 +104,7 @@ public function conversations(Request $request)
                         'created_at' => $message->created_at,
                         'is_read' => $message->is_read,
                         'sender_name' => $message->sender->name ?? 'Unknown',
+                        'sender_avatar' => $senderAvatar,
                         'is_mine' => $message->sender_id === $user->id,
                     ];
                 });
@@ -158,9 +169,14 @@ public function conversations(Request $request)
             // Load sender and receiver relationships
             $message->load(['sender', 'receiver']);
 
+            // Add avatar to response
+            $messageData = $message->toArray();
+            $messageData['sender_avatar'] = $this->getUserAvatarUrl($message->sender);
+            $messageData['receiver_avatar'] = $this->getUserAvatarUrl($message->receiver);
+
             return response()->json([
                 'message' => 'Message sent successfully',
-                'data' => $message
+                'data' => $messageData
             ], 201);
 
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -210,4 +226,48 @@ public function conversations(Request $request)
             ], 500);
         }
     }
+
+    /**
+ * Helper method to get user avatar URL
+ */
+private function getUserAvatarUrl($user)
+{
+    if (!$user) {
+        return null;
+    }
+
+    $appUrl = config('app.url');
+    
+    // Fix localhost URL without port
+    if (str_contains($appUrl, 'localhost') && !str_contains($appUrl, ':')) {
+        $appUrl = 'http://localhost:8000';
+    }
+    
+    if (!str_ends_with($appUrl, '/')) {
+        $appUrl .= '/';
+    }
+
+    // First check if user is a doctor
+    $doctor = Doctor::where('user_id', $user->id)->first();
+    if ($doctor && $doctor->image) {
+        return $appUrl . 'storage/' . $doctor->image;
+    }
+
+    // Then check if user is a patient
+    $patient = Patient::where('user_id', $user->id)->first();
+if ($patient && $patient->photo) {
+    return $appUrl . 'storage/' . $patient->photo;
+}
+
+    // Check for direct user avatar field
+    if ($user->avatar) {
+        if (filter_var($user->avatar, FILTER_VALIDATE_URL)) {
+            return $user->avatar;
+        }
+        return $appUrl . 'storage/' . $user->avatar;
+    }
+
+    // Generate a default avatar using UI Avatars
+    return 'https://ui-avatars.com/api/?name=' . urlencode($user->name) . '&background=random&size=128&bold=true';
+}
 }

@@ -2,12 +2,45 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
     MessageSquare, Search, Paperclip, Send, Phone, Video,
     MoreVertical, Check, CheckCheck, Clock, AlertCircle,
-    Plus, X, Users, ArrowLeft, CheckCircle2
+    Plus, X, Users, ArrowLeft, CheckCircle2, Camera, Loader2
 } from 'lucide-react';
 import { PageTopBar } from "../components/TopBar";
 import { SearchBox } from '../components/SearchBox';
 import api from '../../../api/client';
 import { useAuth } from '../../../context/AuthContext';
+
+// Reusable avatar component with proper image handling
+const Avatar = ({ src, name, sizeClass = 'w-9 h-9', textClass = 'text-sm', className = '' }) => {
+    const [failed, setFailed] = useState(false);
+
+    const getInitials = (n) => {
+        if (!n) return '?';
+        return n.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
+    };
+
+    if (src && !failed) {
+        return (
+            <img
+    src={src}
+    alt={name || 'Avatar'}
+    className={`${sizeClass} rounded-full object-cover shrink-0 ${className}`}
+    onError={() => {
+        console.log('Avatar failed to load:', src);
+        setFailed(true);
+    }}
+    onLoad={() => {
+        console.log('Avatar loaded successfully:', src);
+    }}
+/>
+        );
+    }
+
+    return (
+        <div className={`${sizeClass} rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-white font-semibold shrink-0 ${textClass} ${className}`}>
+            {getInitials(name)}
+        </div>
+    );
+};
 
 export const Messages = ({ updateUnreadCount }) => {
     const { user } = useAuth();
@@ -18,13 +51,15 @@ export const Messages = ({ updateUnreadCount }) => {
     const [sending, setSending] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [newMessage, setNewMessage] = useState('');
-    const [toast, setToast] = useState(null); // { type: 'success' | 'error', text: string }
+    const [toast, setToast] = useState(null);
     const [showNewChat, setShowNewChat] = useState(false);
     const [patients, setPatients] = useState([]);
     const [patientSearch, setPatientSearch] = useState('');
     const [loadingPatients, setLoadingPatients] = useState(false);
     const [showChatOnMobile, setShowChatOnMobile] = useState(false);
-
+    const [doctorProfile, setDoctorProfile] = useState(null);
+    const [uploadingPhoto, setUploadingPhoto] = useState(false);
+    const photoInputRef = useRef(null);
     const chatContainerRef = useRef(null);
     const inputRef = useRef(null);
 
@@ -33,9 +68,37 @@ export const Messages = ({ updateUnreadCount }) => {
         setTimeout(() => setToast(null), 3000);
     };
 
+    // Helper function to get user avatar URL
+    const getAvatarUrl = (userData) => {
+        if (!userData) return null;
+        
+        // Check for image_url first (now contains UI Avatar URL)
+        if (userData.image_url) {
+            return userData.image_url;
+        }
+        
+        // Check for avatar
+        if (userData.avatar) {
+            return userData.avatar;
+        }
+        
+        // Check for photo_url
+        if (userData.photo_url) {
+            return userData.photo_url;
+        }
+        
+        // If user has a name, generate a default avatar
+        if (userData.name) {
+            return `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.name)}&background=random&size=128&bold=true`;
+        }
+        
+        return null;
+    };
+
     useEffect(() => {
         fetchConversations();
         fetchPatients();
+        fetchDoctorProfile();
         const interval = setInterval(() => {
             if (activeConversation) {
                 fetchMessages(activeConversation.id);
@@ -55,10 +118,81 @@ export const Messages = ({ updateUnreadCount }) => {
         scrollToBottom();
     }, [messages]);
 
+    const fetchDoctorProfile = async () => {
+        try {
+            const response = await api.get('/doctor/profile');
+            setDoctorProfile(response.data);
+        } catch (error) {
+            console.error('Error fetching doctor profile:', error);
+        }
+    };
+
+    const handlePhotoSelect = () => {
+        photoInputRef.current?.click();
+    };
+
+    const handlePhotoChange = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            notify('error', 'Please select an image file');
+            return;
+        }
+        if (file.size > 2 * 1024 * 1024) {
+            notify('error', 'Image must be 2MB or smaller');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('image', file);
+
+        setUploadingPhoto(true);
+        try {
+            const response = await api.post('/doctor/image', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+            console.log('Upload response:', response.data);
+            
+            setDoctorProfile((prev) => ({ 
+                ...prev, 
+                image: response.data.image,
+                image_url: response.data.image_url 
+            }));
+            
+            notify('success', 'Profile photo updated!');
+            await fetchDoctorProfile();
+        } catch (error) {
+            console.error('Error uploading photo:', error);
+            notify('error', error.response?.data?.message || 'Failed to upload photo');
+        } finally {
+            setUploadingPhoto(false);
+            if (photoInputRef.current) photoInputRef.current.value = '';
+        }
+    };
+
+    const handlePhotoRemove = async () => {
+        if (!window.confirm('Remove your profile photo?')) return;
+
+        setUploadingPhoto(true);
+        try {
+            await api.delete('/doctor/image');
+            setDoctorProfile((prev) => ({ ...prev, image: null, image_url: null }));
+            notify('success', 'Profile photo removed');
+            await fetchDoctorProfile();
+        } catch (error) {
+            console.error('Error removing photo:', error);
+            notify('error', error.response?.data?.message || 'Failed to remove photo');
+        } finally {
+            setUploadingPhoto(false);
+        }
+    };
+
     const fetchConversations = async () => {
         try {
             setLoading(true);
             const response = await api.get('/messages/conversations');
+            console.log('Conversations response:', response.data);
             setConversations(response.data);
             if (response.data.length > 0) {
                 setActiveConversation((prev) => prev || response.data[0]);
@@ -72,16 +206,11 @@ export const Messages = ({ updateUnreadCount }) => {
         }
     };
 
-    // Only patients who have booked an appointment with this doctor should
-    // appear here. This list is expected to come pre-scoped from the backend
-    // (`/doctor/patients` should join on the doctor's own appointments) —
-    // the frontend does not — and should not — do that filtering itself,
-    // since a client-side-only restriction can be bypassed by calling the
-    // API directly. See note below the component.
     const fetchPatients = async () => {
         try {
             setLoadingPatients(true);
             const response = await api.get('/doctor/patients');
+            console.log('Patients response:', response.data);
             setPatients(response.data);
         } catch (error) {
             console.error('Error fetching patients:', error);
@@ -93,6 +222,7 @@ export const Messages = ({ updateUnreadCount }) => {
     const fetchMessages = async (conversationId) => {
         try {
             const response = await api.get(`/messages/${conversationId}`);
+            console.log('Messages response:', response.data);
             setMessages(response.data);
         } catch (error) {
             console.error('Error fetching messages:', error);
@@ -242,11 +372,6 @@ export const Messages = ({ updateUnreadCount }) => {
         return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: d.getFullYear() !== today.getFullYear() ? 'numeric' : undefined });
     };
 
-    const getInitials = (name) => {
-        if (!name) return '?';
-        return name.split(' ').map(word => word[0]).slice(0, 2).join('').toUpperCase();
-    };
-
     const getStatusIcon = (msg) => {
         if (msg.is_temp && !msg.error) return <Clock size={12} className="text-blue-200" />;
         if (msg.error) return <AlertCircle size={12} className="text-red-200" />;
@@ -349,6 +474,7 @@ export const Messages = ({ updateUnreadCount }) => {
                         filteredConversations.map((conv) => {
                             const isActive = activeConversation?.id === conv.id;
                             const otherUser = conv.other_user;
+                            const avatarUrl = getAvatarUrl(otherUser);
 
                             return (
                                 <button
@@ -359,11 +485,13 @@ export const Messages = ({ updateUnreadCount }) => {
                                     }`}
                                 >
                                     {isActive && <span className="absolute left-0 top-0 bottom-0 w-[3px] bg-blue-600" />}
-                                    <div className="relative shrink-0">
-                                        <div className="w-11 h-11 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-white font-semibold text-sm shadow-sm">
-                                            {getInitials(otherUser?.name)}
-                                        </div>
-                                    </div>
+                                    <Avatar
+                                        src={avatarUrl}
+                                        name={otherUser?.name}
+                                        sizeClass="w-11 h-11"
+                                        textClass="text-sm"
+                                        className="border-2 border-white shadow-sm"
+                                    />
                                     <div className="min-w-0 flex-1">
                                         <div className="flex items-center justify-between gap-2">
                                             <span className={`text-sm truncate ${conv.unread_count > 0 ? 'font-bold text-slate-900' : 'font-semibold text-slate-800'}`}>
@@ -395,7 +523,7 @@ export const Messages = ({ updateUnreadCount }) => {
                 {/* Chat Area */}
                 {activeConversation ? (
                     <div className={`flex-1 flex-col min-w-0 bg-slate-50/40 ${showChatOnMobile ? 'flex' : 'hidden md:flex'}`}>
-                        {/* Chat Header */}
+                        {/* Chat Header with Profile Picture */}
                         <div className="flex items-center justify-between px-4 md:px-5 h-16 border-b border-slate-200 bg-white shrink-0">
                             <div className="flex items-center gap-3 min-w-0">
                                 <button
@@ -405,9 +533,13 @@ export const Messages = ({ updateUnreadCount }) => {
                                 >
                                     <ArrowLeft size={18} />
                                 </button>
-                                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-white font-semibold text-sm shrink-0">
-                                    {getInitials(activeConversation.other_user?.name)}
-                                </div>
+                                <Avatar
+                                    src={getAvatarUrl(activeConversation.other_user)}
+                                    name={activeConversation.other_user?.name}
+                                    sizeClass="w-9 h-9"
+                                    textClass="text-sm"
+                                    className="border border-slate-200"
+                                />
                                 <div className="min-w-0">
                                     <div className="text-sm font-semibold text-slate-800 truncate">
                                         {activeConversation.other_user?.name || 'Unknown User'}
@@ -445,11 +577,37 @@ export const Messages = ({ updateUnreadCount }) => {
                                             </span>
                                         </div>
                                         <div className="space-y-2">
-                                            {group.items.map((msg) => {
+                                            {group.items.map((msg, msgIndex) => {
                                                 const isMine = msg.sender_id === user?.id;
+                                                const senderName = isMine ? 'You' : activeConversation.other_user?.name;
+                                                
+                                                // Get sender avatar
+                                                let senderAvatar;
+                                                if (isMine) {
+                                                    senderAvatar = getAvatarUrl(doctorProfile);
+                                                } else {
+                                                    senderAvatar = getAvatarUrl(activeConversation.other_user);
+                                                }
+                                                
+                                                const previousMsg = group.items[msgIndex - 1];
+                                                const showAvatar = !isMine && (
+                                                    msgIndex === 0 ||
+                                                    previousMsg?.sender_id !== msg.sender_id
+                                                );
+
                                                 return (
                                                     <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
                                                         <div className={`flex items-end gap-2 max-w-[85%] sm:max-w-[70%] ${isMine ? 'flex-row-reverse' : ''}`}>
+                                                            {!isMine && showAvatar && (
+                                                                <Avatar
+                                                                    src={senderAvatar}
+                                                                    name={senderName}
+                                                                    sizeClass="w-8 h-8"
+                                                                    textClass="text-xs"
+                                                                    className="border border-slate-200"
+                                                                />
+                                                            )}
+                                                            {!isMine && !showAvatar && <div className="w-8 shrink-0" />}
                                                             <div
                                                                 className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
                                                                     isMine
@@ -475,6 +633,35 @@ export const Messages = ({ updateUnreadCount }) => {
 
                         {/* Message Input */}
                         <div className="flex items-center gap-2 md:gap-3 px-3 md:px-5 py-3 border-t border-slate-200 bg-white shrink-0">
+                            <div className="relative shrink-0">
+                                <button
+                                    onClick={handlePhotoSelect}
+                                    disabled={uploadingPhoto}
+                                    className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 hover:text-slate-800 transition disabled:opacity-50 overflow-hidden"
+                                    title="Change your profile photo"
+                                >
+                                    {uploadingPhoto ? (
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : doctorProfile?.image_url ? (
+                                        <Avatar
+                                            src={doctorProfile.image_url}
+                                            name={doctorProfile?.full_name || 'You'}
+                                            sizeClass="w-9 h-9"
+                                            textClass="text-xs"
+                                        />
+                                    ) : (
+                                        <Camera size={16} />
+                                    )}
+                                </button>
+                                <input
+                                    ref={photoInputRef}
+                                    type="file"
+                                    accept="image/png,image/jpeg,image/jpg,image.webp"
+                                    onChange={handlePhotoChange}
+                                    className="hidden"
+                                />
+                            </div>
+
                             <button className="text-slate-400 hover:text-slate-600 transition shrink-0" aria-label="Attach file">
                                 <Paperclip size={20} />
                             </button>
@@ -515,7 +702,7 @@ export const Messages = ({ updateUnreadCount }) => {
                 )}
             </div>
 
-            {/* New Chat Modal - shows only patients who have booked with this doctor */}
+            {/* New Chat Modal */}
             {showNewChat && (
                 <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-2xl shadow-xl p-6 max-w-md w-full max-h-[80vh] flex flex-col">
@@ -555,24 +742,30 @@ export const Messages = ({ updateUnreadCount }) => {
                                     </p>
                                 </div>
                             ) : (
-                                filteredPatients.map((patient) => (
-                                    <button
-                                        key={patient.id}
-                                        onClick={() => startNewConversation(patient)}
-                                        className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition border border-slate-100 text-left"
-                                    >
-                                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-white font-semibold text-sm shrink-0">
-                                            {getInitials(patient.name)}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium text-slate-800 truncate">{patient.name}</p>
-                                            <p className="text-xs text-slate-500 truncate">{patient.email || 'No email'}</p>
-                                        </div>
-                                        <span className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg shrink-0">
-                                            Message
-                                        </span>
-                                    </button>
-                                ))
+                                filteredPatients.map((patient) => {
+                                    const avatarUrl = getAvatarUrl(patient);
+                                    return (
+                                        <button
+                                            key={patient.id}
+                                            onClick={() => startNewConversation(patient)}
+                                            className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition border border-slate-100 text-left"
+                                        >
+                                            <Avatar
+                                                src={avatarUrl}
+                                                name={patient.name}
+                                                sizeClass="w-10 h-10"
+                                                textClass="text-sm"
+                                            />
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-medium text-slate-800 truncate">{patient.name}</p>
+                                                <p className="text-xs text-slate-500 truncate">{patient.email || 'No email'}</p>
+                                            </div>
+                                            <span className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg shrink-0">
+                                                Message
+                                            </span>
+                                        </button>
+                                    );
+                                })
                             )}
                         </div>
                     </div>

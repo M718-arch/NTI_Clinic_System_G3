@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, Users, Building2, Bell, Lock, Camera } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Settings as SettingsIcon, Users, Building2, Bell, Lock, Camera, Loader2, X } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import api from '../../../api/client';
 
@@ -67,10 +67,18 @@ export const SettingsPage = () => {
     specialization_id: '',
     specialization: null,
     status: true,
+    image: null,
+    image_url: null,
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
   });
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [saving, setSaving] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  const photoInputRef = useRef(null);
 
   useEffect(() => {
     fetchProfile();
@@ -93,7 +101,8 @@ export const SettingsPage = () => {
         lastName = nameParts.slice(1).join(' ') || '';
       }
       
-      setProfile({
+      setProfile(prev => ({
+        ...prev,
         id: data.id || '',
         user_id: data.user_id || '',
         first_name: firstName,
@@ -112,7 +121,10 @@ export const SettingsPage = () => {
         specialization_id: data.specialization_id || '',
         specialization: data.specialization || null,
         status: data.status ?? true,
-      });
+        image: data.image || null,
+        image_url: data.image_url || null,
+      }));
+      setImageError(false);
       
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -282,11 +294,136 @@ export const SettingsPage = () => {
     }
   };
 
+  const handlePhotoSelect = () => {
+    photoInputRef.current?.click();
+  };
+
+  const handlePhotoChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setMessage({ type: 'error', text: 'Please select an image file' });
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setMessage({ type: 'error', text: 'Image must be 2MB or smaller' });
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('image', file);
+
+    setUploadingPhoto(true);
+    setImageError(false);
+    
+    try {
+      const response = await api.post('/doctor/image', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      console.log('Upload response:', response.data);
+      
+      setProfile(prev => ({
+        ...prev,
+        image: response.data.image_path || response.data.image,
+        image_url: response.data.image_url,
+      }));
+      
+      setMessage({ type: 'success', text: 'Profile photo updated!' });
+      setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+      
+      await fetchProfile();
+    } catch (error) {
+      console.error('Error uploading photo:', error);
+      setMessage({ type: 'error', text: error.response?.data?.message || 'Failed to upload photo' });
+    } finally {
+      setUploadingPhoto(false);
+      if (photoInputRef.current) photoInputRef.current.value = '';
+    }
+  };
+
+  const handlePhotoRemove = async () => {
+    if (!window.confirm('Remove your profile photo?')) return;
+
+    setUploadingPhoto(true);
+    try {
+      await api.delete('/doctor/image');
+      setProfile(prev => ({ ...prev, image: null, image_url: null }));
+      setMessage({ type: 'success', text: 'Profile photo removed' });
+      setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+      
+      await fetchProfile();
+    } catch (error) {
+      console.error('Error removing photo:', error);
+      setMessage({ type: 'error', text: error.response?.data?.message || 'Failed to remove photo' });
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  // FIXED: Get the correct photo URL with port
+  const getPhotoUrl = () => {
+    if (!profile?.image_url) return null;
+    
+    let url = profile.image_url;
+    
+    // If it's already a full URL with protocol, return it
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    
+    // Get the base URL from the API client or use environment
+    // Since your API uses relative URLs, we need to construct the full URL
+    const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+    
+    // If it starts with /storage/, prepend the base URL
+    if (url.startsWith('/storage/')) {
+      return `${baseUrl}${url}`;
+    }
+    
+    // If it's just the path without /storage/ (e.g., doctor-images/...)
+    if (url.startsWith('doctor-images/')) {
+      return `${baseUrl}/storage/${url}`;
+    }
+    
+    // Fallback: use the image path with storage
+    if (profile.image && !profile.image.startsWith('http')) {
+      return `${baseUrl}/storage/${profile.image}`;
+    }
+    
+    return url;
+  };
+
   const getDisplayName = () => {
     if (profile.first_name || profile.last_name) {
       return `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
     }
     return user?.name || 'No Name';
+  };
+
+  const handleImageError = (e) => {
+    console.error('Image failed to load:', getPhotoUrl());
+    setImageError(true);
+    
+    // Try fallback with port 8000
+    if (profile.image) {
+      const fallbackUrl = `http://localhost:8000/storage/${profile.image}`;
+      console.log('Trying fallback URL:', fallbackUrl);
+      e.target.src = fallbackUrl;
+      
+      setTimeout(() => {
+        if (e.target.naturalWidth === 0) {
+          e.target.style.display = 'none';
+          const parent = e.target.parentElement;
+          if (parent) {
+            const initials = document.createElement('span');
+            initials.className = 'text-white text-2xl font-bold';
+            initials.textContent = (displayName?.charAt(0) || 'D').toUpperCase();
+            parent.appendChild(initials);
+          }
+        }
+      }, 1000);
+    }
   };
 
   if (loading) {
@@ -301,6 +438,8 @@ export const SettingsPage = () => {
   }
 
   const displayName = getDisplayName();
+  const photoUrl = getPhotoUrl();
+  console.log('Final photo URL:', photoUrl);
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
@@ -345,12 +484,40 @@ export const SettingsPage = () => {
                 <h3 className="text-sm font-semibold text-slate-700 mb-5">Profile information</h3>
                 <div className="flex items-center gap-4 mb-6">
                   <div className="relative">
-                    <div className="w-16 h-16 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 flex items-center justify-center text-white text-2xl font-bold">
-                      {(displayName?.charAt(0) || 'D').toUpperCase()}
+                    <div className="w-20 h-20 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 flex items-center justify-center text-white text-2xl font-bold overflow-hidden">
+                      {photoUrl && !imageError ? (
+                        <img
+                          src={photoUrl}
+                          alt={displayName}
+                          className="w-full h-full object-cover"
+                          onError={handleImageError}
+                          onLoad={() => setImageError(false)}
+                        />
+                      ) : (
+                        <span>{(displayName?.charAt(0) || 'D').toUpperCase()}</span>
+                      )}
                     </div>
-                    <button className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center border-2 border-white hover:bg-blue-700 transition">
-                      <Camera size={11} />
+                    
+                    <button
+                      onClick={handlePhotoSelect}
+                      disabled={uploadingPhoto}
+                      className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center border-2 border-white hover:bg-blue-700 transition disabled:opacity-50"
+                      title="Change profile photo"
+                    >
+                      {uploadingPhoto ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Camera size={14} />
+                      )}
                     </button>
+                    
+                    <input
+                      ref={photoInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/jpg,image.webp"
+                      onChange={handlePhotoChange}
+                      className="hidden"
+                    />
                   </div>
                   <div>
                     <div className="font-semibold text-slate-800 text-lg">
@@ -361,6 +528,14 @@ export const SettingsPage = () => {
                       <div className="text-xs text-blue-600 font-medium mt-1">
                         {profile.specialization.name || 'No Specialization'}
                       </div>
+                    )}
+                    {photoUrl && !uploadingPhoto && (
+                      <button
+                        onClick={handlePhotoRemove}
+                        className="text-xs text-red-500 hover:text-red-700 mt-1 transition"
+                      >
+                        Remove photo
+                      </button>
                     )}
                   </div>
                 </div>

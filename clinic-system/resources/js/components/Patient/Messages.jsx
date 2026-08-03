@@ -9,6 +9,33 @@ import { SearchBox } from "../Doctor/components/SearchBox";
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 
+// Reusable avatar component with proper image handling
+const Avatar = ({ src, name, sizeClass = 'w-9 h-9', textClass = 'text-sm', className = '' }) => {
+    const [failed, setFailed] = useState(false);
+
+    const getInitials = (n) => {
+        if (!n) return '?';
+        return n.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
+    };
+
+    if (src && !failed) {
+        return (
+            <img
+                src={src}
+                alt={name || 'Avatar'}
+                className={`${sizeClass} rounded-full object-cover shrink-0 ${className}`}
+                onError={() => setFailed(true)}
+            />
+        );
+    }
+
+    return (
+        <div className={`${sizeClass} rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-white font-semibold shrink-0 ${textClass} ${className}`}>
+            {getInitials(name)}
+        </div>
+    );
+};
+
 export const PatientMessages = () => {
     const { user } = useAuth();
     const [conversations, setConversations] = useState([]);
@@ -31,6 +58,21 @@ export const PatientMessages = () => {
     const notify = (type, text) => {
         setToast({ type, text });
         setTimeout(() => setToast(null), 3000);
+    };
+
+    // Helper function to get user/doctor avatar URL
+    const getAvatarUrl = (data) => {
+        if (!data) return null;
+
+        if (data.image_url) return data.image_url;
+        if (data.avatar) return data.avatar;
+        if (data.photo_url) return data.photo_url;
+
+        if (data.name) {
+            return `https://ui-avatars.com/api/?name=${encodeURIComponent(data.name)}&background=random&size=128&bold=true`;
+        }
+
+        return null;
     };
 
     useEffect(() => {
@@ -236,11 +278,6 @@ export const PatientMessages = () => {
         return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: d.getFullYear() !== today.getFullYear() ? 'numeric' : undefined });
     };
 
-    const getInitials = (name) => {
-        if (!name) return '?';
-        return name.split(' ').map(word => word[0]).slice(0, 2).join('').toUpperCase();
-    };
-
     const getStatusIcon = (msg) => {
         if (msg.is_temp && !msg.error) return <Clock size={12} className="text-blue-200" />;
         if (msg.error) return <AlertCircle size={12} className="text-red-200" />;
@@ -344,6 +381,7 @@ export const PatientMessages = () => {
                         filteredConversations.map((conv) => {
                             const isActive = activeConversation?.id === conv.id;
                             const otherUser = conv.other_user;
+                            const avatarUrl = getAvatarUrl(otherUser);
 
                             return (
                                 <button
@@ -354,11 +392,13 @@ export const PatientMessages = () => {
                                     }`}
                                 >
                                     {isActive && <span className="absolute left-0 top-0 bottom-0 w-[3px] bg-blue-600" />}
-                                    <div className="relative shrink-0">
-                                        <div className="w-11 h-11 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-white font-semibold text-sm shadow-sm">
-                                            {getInitials(otherUser?.name)}
-                                        </div>
-                                    </div>
+                                    <Avatar
+                                        src={avatarUrl}
+                                        name={otherUser?.name}
+                                        sizeClass="w-11 h-11"
+                                        textClass="text-sm"
+                                        className="border-2 border-white shadow-sm"
+                                    />
                                     <div className="min-w-0 flex-1">
                                         <div className="flex items-center justify-between gap-2">
                                             <span className={`text-sm truncate ${conv.unread_count > 0 ? 'font-bold text-slate-900' : 'font-semibold text-slate-800'}`}>
@@ -400,9 +440,13 @@ export const PatientMessages = () => {
                                 >
                                     <ArrowLeft size={18} />
                                 </button>
-                                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-white font-semibold text-sm shrink-0">
-                                    {getInitials(activeConversation.other_user?.name)}
-                                </div>
+                                <Avatar
+                                    src={getAvatarUrl(activeConversation.other_user)}
+                                    name={activeConversation.other_user?.name}
+                                    sizeClass="w-9 h-9"
+                                    textClass="text-sm"
+                                    className="border border-slate-200"
+                                />
                                 <div className="min-w-0">
                                     <div className="text-sm font-semibold text-slate-800 truncate">
                                         {activeConversation.other_user?.name ? `Dr. ${activeConversation.other_user.name}` : 'Unknown User'}
@@ -440,11 +484,30 @@ export const PatientMessages = () => {
                                             </span>
                                         </div>
                                         <div className="space-y-2">
-                                            {group.items.map((msg) => {
+                                            {group.items.map((msg, msgIndex) => {
                                                 const isMine = msg.sender_id === user?.id;
+                                                const senderName = isMine ? 'You' : activeConversation.other_user?.name;
+                                                const senderAvatar = isMine ? null : getAvatarUrl(activeConversation.other_user);
+
+                                                const previousMsg = group.items[msgIndex - 1];
+                                                const showAvatar = !isMine && (
+                                                    msgIndex === 0 ||
+                                                    previousMsg?.sender_id !== msg.sender_id
+                                                );
+
                                                 return (
                                                     <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
                                                         <div className={`flex items-end gap-2 max-w-[85%] sm:max-w-[70%] ${isMine ? 'flex-row-reverse' : ''}`}>
+                                                            {!isMine && showAvatar && (
+                                                                <Avatar
+                                                                    src={senderAvatar}
+                                                                    name={senderName}
+                                                                    sizeClass="w-8 h-8"
+                                                                    textClass="text-xs"
+                                                                    className="border border-slate-200"
+                                                                />
+                                                            )}
+                                                            {!isMine && !showAvatar && <div className="w-8 shrink-0" />}
                                                             <div
                                                                 className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
                                                                     isMine
@@ -549,32 +612,38 @@ export const PatientMessages = () => {
                                     </p>
                                 </div>
                             ) : (
-                                filteredDoctors.map((doctor) => (
-                                    <button
-                                        key={doctor.id}
-                                        onClick={() => startNewConversation(doctor)}
-                                        className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition border border-slate-100 text-left"
-                                    >
-                                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-white font-semibold text-sm shrink-0">
-                                            {getInitials(doctor.name)}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2">
-                                                <p className="text-sm font-medium text-slate-800 truncate">Dr. {doctor.name}</p>
-                                                <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full shrink-0">
-                                                    {doctor.specialization || 'General'}
-                                                </span>
+                                filteredDoctors.map((doctor) => {
+                                    const avatarUrl = getAvatarUrl(doctor);
+                                    return (
+                                        <button
+                                            key={doctor.id}
+                                            onClick={() => startNewConversation(doctor)}
+                                            className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition border border-slate-100 text-left"
+                                        >
+                                            <Avatar
+                                                src={avatarUrl}
+                                                name={doctor.name}
+                                                sizeClass="w-10 h-10"
+                                                textClass="text-sm"
+                                            />
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2">
+                                                    <p className="text-sm font-medium text-slate-800 truncate">Dr. {doctor.name}</p>
+                                                    <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full shrink-0">
+                                                        {doctor.specialization || 'General'}
+                                                    </span>
+                                                </div>
+                                                <p className="text-xs text-slate-500 truncate">{doctor.clinic_name || 'No clinic'}</p>
+                                                {doctor.consultation_fee && (
+                                                    <p className="text-[11px] text-slate-400">Consultation: ${doctor.consultation_fee}</p>
+                                                )}
                                             </div>
-                                            <p className="text-xs text-slate-500 truncate">{doctor.clinic_name || 'No clinic'}</p>
-                                            {doctor.consultation_fee && (
-                                                <p className="text-[11px] text-slate-400">Consultation: ${doctor.consultation_fee}</p>
-                                            )}
-                                        </div>
-                                        <span className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg shrink-0">
-                                            Message
-                                        </span>
-                                    </button>
-                                ))
+                                            <span className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg shrink-0">
+                                                Message
+                                            </span>
+                                        </button>
+                                    );
+                                })
                             )}
                         </div>
                     </div>
