@@ -8,6 +8,9 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DoctorController;
 use App\Http\Controllers\Admin\PatientController;
 use App\Http\Controllers\Admin\ReportController;
+use App\Models\Doctor;
+use App\Models\Patient;
+use App\Models\Booking;
 
 /*
 |--------------------------------------------------------------------------
@@ -16,7 +19,22 @@ use App\Http\Controllers\Admin\ReportController;
 */
 
 Route::get('/', function () {
-    return view('welcome');
+    // Featured doctors — active only, with their specialization loaded
+    $doctors = Doctor::query()
+        ->active()
+        ->with('specialization')
+        ->latest()
+        ->take(3)
+        ->get();
+
+    // Live counts for the hero card + animated stats section
+    $stats = [
+        'doctors'      => Doctor::active()->count(),
+        'patients'     => Patient::count(),
+        'appointments' => Booking::count(),
+    ];
+
+    return view('welcome', compact('doctors', 'stats'));
 })->name('home');
 
 Route::get('/dashboard', function () {

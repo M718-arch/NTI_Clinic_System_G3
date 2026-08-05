@@ -164,6 +164,7 @@ export const SettingsPage = () => {
     }
   };
 
+  // ADD THIS FUNCTION - Save profile changes
   const handleSave = async () => {
     setSaving(true);
     setMessage({ type: '', text: '' });
@@ -239,6 +240,7 @@ export const SettingsPage = () => {
     }
   };
 
+  // ADD THIS FUNCTION - Update password
   const handlePasswordUpdate = async () => {
     setSaving(true);
     setMessage({ type: '', text: '' });
@@ -361,34 +363,25 @@ export const SettingsPage = () => {
     }
   };
 
-  // FIXED: Get the correct photo URL with port
   const getPhotoUrl = () => {
     if (!profile?.image_url) return null;
     
     let url = profile.image_url;
     
-    // If it's already a full URL with protocol, return it
     if (url.startsWith('http://') || url.startsWith('https://')) {
       return url;
     }
     
-    // Get the base URL from the API client or use environment
-    // Since your API uses relative URLs, we need to construct the full URL
-    const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
-    
-    // If it starts with /storage/, prepend the base URL
     if (url.startsWith('/storage/')) {
-      return `${baseUrl}${url}`;
+      return `${window.location.origin}${url}`;
     }
     
-    // If it's just the path without /storage/ (e.g., doctor-images/...)
     if (url.startsWith('doctor-images/')) {
-      return `${baseUrl}/storage/${url}`;
+      return `${window.location.origin}/storage/${url}`;
     }
     
-    // Fallback: use the image path with storage
     if (profile.image && !profile.image.startsWith('http')) {
-      return `${baseUrl}/storage/${profile.image}`;
+      return `${window.location.origin}/storage/${profile.image}`;
     }
     
     return url;
@@ -405,10 +398,9 @@ export const SettingsPage = () => {
     console.error('Image failed to load:', getPhotoUrl());
     setImageError(true);
     
-    // Try fallback with port 8000
     if (profile.image) {
-      const fallbackUrl = `http://localhost:8000/storage/${profile.image}`;
-      console.log('Trying fallback URL:', fallbackUrl);
+      const baseUrl = window.location.origin;
+      const fallbackUrl = `${baseUrl}/storage/${profile.image}`;
       e.target.src = fallbackUrl;
       
       setTimeout(() => {
@@ -439,7 +431,6 @@ export const SettingsPage = () => {
 
   const displayName = getDisplayName();
   const photoUrl = getPhotoUrl();
-  console.log('Final photo URL:', photoUrl);
 
   return (
     <div className="flex-1 flex flex-col min-h-0">

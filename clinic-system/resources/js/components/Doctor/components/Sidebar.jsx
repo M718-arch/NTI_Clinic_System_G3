@@ -1,8 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { HelpCircle, ChevronDown, LogOut } from 'lucide-react';
+import { HelpCircle, LogOut } from 'lucide-react';
 import { NAV_ITEMS } from '../data';
 import { useAuth } from '../../../context/AuthContext';
 import api from '../../../api/client';
+
+/* ------------------------------------------------------------------ */
+/* CLINICAL CLARITY GLASS — Glacier (dark) variant                    */
+/* Same tokens as Calendar.jsx, so the sidebar and main content read  */
+/* as one cohesive surface instead of two different apps.             */
+/* ------------------------------------------------------------------ */
+
+const COLOR = {
+    bg: '#0a0e1a',
+    surfaceContainer: '#141c2e',
+    onSurface: '#e0e8f0',
+    onSurfaceVariant: '#a0b4c4',
+    primary: '#7dd3fc',
+    onPrimary: '#001f2e',
+    error: '#ff6b6b',
+};
+
+const glassHover = 'hover:bg-[rgba(125,211,252,0.08)]';
 
 export const Sidebar = ({ active, onNavigate }) => {
   const { user, logout } = useAuth();
@@ -44,14 +62,27 @@ export const Sidebar = ({ active, onNavigate }) => {
   };
 
   return (
-    <aside className="w-56 shrink-0 bg-white border-r border-slate-100 flex flex-col h-full">
-      <div className="flex items-center gap-2 px-5 h-16 border-b border-slate-100 shrink-0">
-        <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
+    <aside
+      className="w-56 shrink-0 flex flex-col h-full font-['Inter'] border-r border-[rgba(125,211,252,0.1)]"
+      style={{ backgroundColor: COLOR.surfaceContainer }}
+    >
+      <div className="flex items-center gap-2 px-5 h-16 border-b border-[rgba(125,211,252,0.1)] shrink-0">
+        <div
+          className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm shrink-0"
+          style={{
+            background: 'linear-gradient(135deg, #7dd3fc 0%, #c8a0f0 100%)',
+            color: COLOR.onPrimary,
+          }}
+        >
           {user?.name?.charAt(0) || 'D'}
         </div>
-        <div>
-          <div className="text-[15px] font-bold text-slate-800 leading-tight">{user?.name || 'Doctor'}</div>
-          <div className="text-[10px] text-slate-400 leading-tight">Cabut gigi tanpa sakit</div>
+        <div className="min-w-0">
+          <div className="text-[15px] font-bold leading-tight truncate" style={{ color: COLOR.onSurface }}>
+            {user?.name || 'Doctor'}
+          </div>
+          <div className="text-[10px] leading-tight truncate" style={{ color: COLOR.onSurfaceVariant }}>
+            Cabut gigi tanpa sakit
+          </div>
         </div>
       </div>
 
@@ -65,16 +96,27 @@ export const Sidebar = ({ active, onNavigate }) => {
             <button
               key={item.key}
               onClick={() => onNavigate(item.key)}
-              className={`w-full flex items-center gap-3 px-5 py-2.5 text-sm font-medium transition-colors ${
+              style={
                 isActive
-                  ? "bg-blue-600 text-white"
-                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+                  ? {
+                      backgroundColor: 'rgba(125,211,252,0.15)',
+                      color: COLOR.primary,
+                      borderLeft: `3px solid ${COLOR.primary}`,
+                      boxShadow: 'inset 0 0 20px rgba(125,211,252,0.05)',
+                    }
+                  : { color: COLOR.onSurfaceVariant, borderLeft: '3px solid transparent' }
+              }
+              className={`w-full flex items-center gap-3 pl-[17px] pr-5 py-2.5 text-sm font-medium transition-colors ${
+                isActive ? '' : `${glassHover} hover:text-[#e0e8f0]`
               }`}
             >
               <div className="relative">
                 <Icon size={17} strokeWidth={2} />
                 {isMessages && unreadMessages > 0 && (
-                  <span className="absolute -top-1 -right-2 bg-red-500 text-white text-[8px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1">
+                  <span
+                    className="absolute -top-1 -right-2 text-white text-[8px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1 shadow-[0_0_6px_rgba(255,107,107,0.6)]"
+                    style={{ backgroundColor: COLOR.error }}
+                  >
                     {unreadMessages > 99 ? '99+' : unreadMessages}
                   </span>
                 )}
@@ -85,8 +127,11 @@ export const Sidebar = ({ active, onNavigate }) => {
         })}
       </nav>
 
-      <div className="px-5 py-3 border-t border-slate-100 shrink-0 space-y-2">
-        <button className="flex items-center gap-2 text-slate-400 text-sm hover:text-slate-600 w-full transition">
+      <div className="px-5 py-3 border-t border-[rgba(125,211,252,0.1)] shrink-0 space-y-2">
+        <button
+          className={`flex items-center gap-2 text-sm w-full transition rounded-lg px-2 py-1.5 ${glassHover}`}
+          style={{ color: COLOR.onSurfaceVariant }}
+        >
           <HelpCircle size={16} />
           Help ?
         </button>
@@ -94,7 +139,8 @@ export const Sidebar = ({ active, onNavigate }) => {
         {/* Logout Button */}
         <button
           onClick={handleLogout}
-          className="flex items-center gap-2 text-red-500 text-sm hover:text-red-700 hover:bg-red-50 w-full px-2 py-1.5 rounded-lg transition"
+          className="flex items-center gap-2 text-sm w-full px-2 py-1.5 rounded-lg transition hover:bg-[rgba(255,107,107,0.1)]"
+          style={{ color: COLOR.error }}
         >
           <LogOut size={16} />
           Logout

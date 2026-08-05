@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+
+<html class="" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>HealPath Portal - Messages</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700&amp;family=Inter:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">tailwind.config = {darkMode: "class", theme: {extend: {colors: {"on-error": "#ffffff", tertiary: "#793100", "outline-variant": "#c2c6d4", "on-surface": "#191c1e", "surface-tint": "#005db6", "surface-container-high": "#e6e8ea", "surface-container-lowest": "#ffffff", "on-primary-fixed": "#001b3d", "on-secondary-fixed-variant": "#3d4851", "tertiary-fixed-dim": "#ffb691", "on-tertiary-container": "#ffcfb9", "inverse-on-surface": "#eff1f3", "primary-fixed-dim": "#a9c7ff", "secondary-fixed-dim": "#bdc8d3", primary: "#00478d", "on-tertiary": "#ffffff", "on-surface-variant": "#424752", "primary-fixed": "#d6e3ff", "primary-container": "#005eb8", "on-primary": "#ffffff", "surface-container-highest": "#e0e3e5", "surface-container": "#eceef0", "on-tertiary-fixed": "#341100", outline: "#727783", "on-secondary-container": "#5b6670", "on-secondary": "#ffffff", "on-primary-container": "#c8daff", "secondary-container": "#d9e4f0", secondary: "#55606a", "error-container": "#ffdad6", "on-background": "#191c1e", "inverse-surface": "#2d3133", error: "#ba1a1a", "surface-dim": "#d8dadc", "surface-bright": "#f7f9fb", "tertiary-container": "#9f4300", "on-error-container": "#93000a", "on-primary-fixed-variant": "#00468c", surface: "#f7f9fb", "tertiary-fixed": "#ffdbcb", background: "#f7f9fb", "surface-variant": "#e0e3e5", "on-secondary-fixed": "#121d25", "on-tertiary-fixed-variant": "#793100", "inverse-primary": "#a9c7ff", "surface-container-low": "#f2f4f6", "secondary-fixed": "#d9e4f0", "tertiary-dim": "#623f87", "primary-dim": "#005672", "error-dim": "#9f0519", "secondary-dim": "#27556a"}, borderRadius: {DEFAULT: "0.25rem", lg: "0.5rem", xl: "0.75rem", full: "9999px"}, fontFamily: {headline: ["Plus Jakarta Sans"], display: ["Plus Jakarta Sans"], body: ["Inter"], label: ["Inter"]}, fontSize: {}}}};</script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0a0e1a;
+            color: #e0e8f0;
+            overflow: hidden;
+        }
+        
+        /* Glassmorphism Utilities */
+        .glass-panel {
+            background: rgba(15, 21, 36, 0.3);
+            backdrop-filter: blur(32px);
+            -webkit-backdrop-filter: blur(32px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        
+        .glass-panel-elevated {
+            background: rgba(15, 21, 36, 0.4);
+            backdrop-filter: blur(48px);
+            -webkit-backdrop-filter: blur(48px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .glass-button {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            transition: all 0.2s ease;
+        }
+        
+        .glass-button:hover {
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+        }
+
+        .glass-input {
+            background: rgba(15, 21, 36, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #ffffff;
+        }
+        
+        .glass-input:focus {
+            outline: none;
+            border-color: rgba(255, 255, 255, 0.4);
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+        }
+
+        /* Message Bubbles */
+        .msg-doctor {
+            background: rgba(14, 77, 110, 0.4); /* primary-container approx */
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-bottom-right-radius: 4px;
+        }
+
+        .msg-patient {
+            background: rgba(26, 36, 56, 0.4); /* surface-variant approx */
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-bottom-left-radius: 4px;
+        }
+
+        /* Custom Scrollbar for chat */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(10, 14, 26, 0.5);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+    </style>
+</head>
+<body class="flex flex-col h-screen bg-background text-on-surface antialiased relative">
+<!-- Background atmospheric glow -->
+<div class="absolute inset-0 z-0 overflow-hidden pointer-events-none flex justify-center items-center">
+<div class="w-[800px] h-[800px] rounded-full bg-primary/20 blur-[120px] absolute top-[-200px] left-[-200px]"></div>
+<div class="w-[600px] h-[600px] rounded-full bg-tertiary/20 blur-[100px] absolute bottom-[-100px] right-[-100px]"></div>
+</div>
+<!-- TopAppBar -->
+<header class="bg-surface dark:bg-surface-container-low flex justify-between items-center w-full px-8 h-16 shadow-sm z-10 relative shrink-0 border-b border-outline-variant/30">
+<!-- Brand -->
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary text-3xl">medical_services</span>
+<h1 class="text-xl font-bold text-primary dark:text-inverse-primary tracking-tight">HealPath Portal</h1>
+</div>
+<!-- Navigation Links (Web) -->
+<nav class="hidden md:flex gap-8 h-full">
+<a class="flex items-center h-full text-on-surface-variant dark:text-on-secondary-container hover:text-primary dark:hover:text-inverse-primary transition-colors text-sm font-medium" href="#">Dashboard</a>
+<a class="flex items-center h-full text-on-surface-variant dark:text-on-secondary-container hover:text-primary dark:hover:text-inverse-primary transition-colors text-sm font-medium" href="#">Records</a>
+<a class="flex items-center h-full text-primary dark:text-inverse-primary border-b-2 border-primary dark:border-inverse-primary font-semibold text-sm" href="#">Messages</a>
+<a class="flex items-center h-full text-on-surface-variant dark:text-on-secondary-container hover:text-primary dark:hover:text-inverse-primary transition-colors text-sm font-medium" href="#">Billings</a>
+</nav>
+<!-- Actions -->
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<img alt="Patient Profile Avatar" class="w-8 h-8 rounded-full border border-primary/30 object-cover ml-2" data-alt="A small circular avatar portrait of a medical professional, wearing a white coat, neutral studio lighting, modern medical setting context, professional headshot style in a deep navy and ice-blue glassmorphic UI environment." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD8PlgT3eZreSaN9KLGHla8lEFtBI8_TWXwrG4BFwf8s8vlTDM7RVPc4isNQ4o6dnsJgf4xfboBF-f53X_tUVsn0jlrpYtQdyj6sydI4dUJNaLc2L_QBQjzW_7zBrN78UhPWtXgJxxmM8M7mFvRVuRswHu2ZokJc-YgxojVPgv0fBOvla4p545L3_JXdXUBKXaQl6Uyu32dBvSeD9v7tkaiN86bC1mJQt3_sN51BwcuehH0SF4QmJEA6A"/>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="flex-1 flex overflow-hidden z-10 p-4 gap-4 max-w-7xl mx-auto w-full">
+<!-- Left Panel: Conversations List -->
+<aside class="w-80 glass-panel rounded-xl flex flex-col shrink-0 overflow-hidden shadow-lg">
+<!-- Header & Search -->
+<div class="p-4 border-b border-white/10 bg-surface-container/20">
+<h2 class="text-lg font-semibold text-white mb-4">Secure Messages</h2>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-2.5 text-gray-300 text-sm">search</span>
+<input class="w-full glass-input rounded-full py-2 pl-9 pr-4 text-sm placeholder-gray-400" placeholder="Search patients..." type="text"/>
+</div>
+</div>
+<!-- List -->
+<div class="flex-1 overflow-y-auto">
+<!-- Active Conversation Item -->
+<div class="p-4 border-b border-white/5 bg-white/10 cursor-pointer border-l-2 border-l-primary flex items-start gap-3 hover:bg-white/5 transition-colors">
+<div class="relative">
+<img class="w-10 h-10 rounded-full object-cover border border-white/40" data-alt="Close up portrait of a middle aged male patient, looking slightly concerned but calm, dramatic cinematic lighting, deep blue and teal tones, glassmorphism UI aesthetic integration." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC0ZcDK8da2byV8DC4yteGgq50thAsrhgmL3riDuoRy8gWS65mF3Yw1-uYRMQzJKFLT5ELcFwG1jupCrls_mQIFC5eJaeP9OrKkW7XbQ_ZdKO9d8Rd910Q5Z89iBHgCIfSlDKW7HhFYutMTav3Cj53IxaG_IrL2qpDg55NDQbOM2anHmFW4zpT7s_Um7fO56dfEzYTHhO-OEgymeyEguf3uUhym4XLmbXeQS_kYCw6buA1WY8bZu6eVng"/>
+<div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-[#0f1524]"></div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-baseline mb-1">
+<h3 class="font-semibold text-sm truncate text-white">Marcus Vance</h3>
+<span class="text-xs text-primary font-medium">10:42 AM</span>
+</div>
+<p class="text-xs text-gray-200 truncate">Thank you, doctor. I'll pick up the prescription today.</p>
+</div>
+</div>
+<!-- Inactive Conversation Item -->
+<div class="p-4 border-b border-white/5 cursor-pointer flex items-start gap-3 hover:bg-white/5 transition-colors">
+<div class="relative">
+<div class="w-10 h-10 rounded-full bg-secondary/30 flex items-center justify-center text-white font-bold text-sm border border-white/20">EL</div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-baseline mb-1">
+<h3 class="font-medium text-sm truncate text-gray-200">Elena Rostova</h3>
+<span class="text-xs text-gray-400">Yesterday</span>
+</div>
+<p class="text-xs text-gray-300 truncate">Is it normal to experience mild headaches after...</p>
+</div>
+<div class="w-2 h-2 bg-primary rounded-full mt-1.5 shrink-0 shadow-[0_0_8px_rgba(125,211,252,0.8)]"></div>
+</div>
+<!-- Inactive Conversation Item -->
+<div class="p-4 border-b border-white/5 cursor-pointer flex items-start gap-3 hover:bg-white/5 transition-colors opacity-70">
+<div class="relative">
+<img class="w-10 h-10 rounded-full object-cover border border-white/20" data-alt="Portrait of an elderly female patient with silver hair, gentle expression, soft lighting against a dark moody background, high resolution, cool blue cinematic grading." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCxIqxe92w5GgotpH7aYgwHlnacFtUdxKw2a7-6j0NMO2f83QRLoXZJNnORXpYYqdB-2iYf_i3cXar04XUzcz1Pr6xJ7J2djywmK5j9xiDismZRwO_2_TPzf1fNECoDXoiN7CTu8GqL4LQ-5PIWAOU1wNj-vFvYUn2CnCaZ7AC993U7S7x_8R2T3ilt9rv2_4TNHPL8dJ-RPSl41fbbcQmdNcgEOQBSgC06EOnnbye31AEF0dBaSRW8kw"/>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-baseline mb-1">
+<h3 class="font-medium text-sm truncate text-gray-200">Clara Higgins</h3>
+<span class="text-xs text-gray-400">Mon</span>
+</div>
+<p class="text-xs text-gray-300 truncate">Test results received.</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- Right Panel: Active Chat -->
+<section class="flex-1 glass-panel-elevated rounded-xl flex flex-col overflow-hidden shadow-2xl relative">
+<!-- Chat Header -->
+<div class="p-4 border-b border-white/10 bg-surface-container-high/20 flex justify-between items-center z-10">
+<div class="flex items-center gap-4">
+<img class="w-12 h-12 rounded-full object-cover border-2 border-white/40 shadow-[0_0_15px_rgba(255,255,255,0.1)]" data-alt="Close up portrait of a middle aged male patient, looking slightly concerned but calm, dramatic cinematic lighting, deep blue and teal tones, glassmorphism UI aesthetic integration." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA5ttHevZK_7pqjOVM9LkQEscx2x4gMS5KoRz3gFgf6euHbmXHV-qtbMsCKJn1f7GE-RqB-lnJxnKZqUYc2454lTy2eXx206X4cpVj4jDOLXFX0o6UPNqVgLlyTd-k6iN4HtKEUzsewSL1smLrhfig47nI8aQNJ-EhyYKw23zdRrBjEuISwnNqtaxqD_ehsuxoLHBFRnZ_lN34ZdcbHfNSkLYYi8AVW6JgfH0g6Q14rUKeqfGs7f09wIg"/>
+<div>
+<h2 class="font-bold text-lg text-white flex items-center gap-2">
+                            Marcus Vance
+                            <span class="px-2 py-0.5 rounded bg-primary/20 text-primary text-[10px] font-semibold border border-primary/30 uppercase tracking-wider">Patient</span>
+</h2>
+<p class="text-xs text-gray-300">DOB: 11/04/1978 • ID: #PT-8829</p>
+</div>
+</div>
+<div class="flex gap-2">
+<button class="glass-button p-2 rounded-lg text-white flex items-center justify-center w-10 h-10">
+<span class="material-symbols-outlined text-[20px]">videocam</span>
+</button>
+<button class="glass-button p-2 rounded-lg text-white flex items-center justify-center w-10 h-10">
+<span class="material-symbols-outlined text-[20px]">info</span>
+</button>
+</div>
+</div>
+<!-- Message Thread -->
+<div class="flex-1 overflow-y-auto p-6 space-y-6 bg-transparent relative z-0">
+<!-- Timestamp separator -->
+<div class="flex justify-center">
+<span class="px-3 py-1 rounded-full bg-white/10 text-[10px] font-medium text-gray-200 border border-white/20 backdrop-blur-md">Today, 09:14 AM</span>
+</div>
+<!-- Patient Message (Left) -->
+<div class="flex justify-start max-w-3xl">
+<div class="flex gap-3 items-end">
+<img class="w-8 h-8 rounded-full object-cover border border-white/30 shrink-0 mb-1" data-alt="Close up portrait of a middle aged male patient, looking slightly concerned but calm, dramatic cinematic lighting, deep blue and teal tones, glassmorphism UI aesthetic integration." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDghFA3QE4tM9JQy3jAyGnWl9bx-xivib_QiQnEgNuRT2dFpg-HDOLRoFFUBRxSv0Wl6TA0ASwoT30ao2fdwtP8IoW21I__5LOK-vMBRhgIhJan1TbLPt1KP6GiZ3dMwS2QPDrRP6kH8bo1poPs7aWbWJt0ctCM-n5bLKTb9SexGdOkqWZlYqmM-8ZRnyMQA5ncTlU2c5Q_9o3kzCHkdnMgSmRNJ3kde3l3F1OZ1w5JUeBb8N4pxprVDA"/>
+<div class="flex flex-col gap-1">
+<span class="text-[10px] text-gray-300 ml-1">Marcus Vance</span>
+<div class="msg-patient p-4 rounded-2xl rounded-bl-sm text-sm text-white shadow-sm">
+                                Good morning Dr. Chen. I've been feeling a bit nauseous since starting the new medication you prescribed yesterday. Is this a normal side effect?
+                            </div>
+</div>
+</div>
+</div>
+<!-- Doctor Message (Right) -->
+<div class="flex justify-end max-w-3xl ml-auto">
+<div class="flex flex-col gap-1 items-end">
+<span class="text-[10px] text-primary/90 mr-1">You • 09:45 AM</span>
+<div class="msg-doctor p-4 rounded-2xl rounded-br-sm text-sm text-white shadow-[0_4px_20px_rgba(0,0,0,0.1)]">
+                            Hello Marcus. Yes, mild nausea can occur during the first 48 hours as your body adjusts to the Lisinopril. I recommend taking it with a small meal rather than on an empty stomach.
+                        </div>
+</div>
+</div>
+<!-- Doctor Message (Right) - Follow up -->
+<div class="flex justify-end max-w-3xl ml-auto">
+<div class="flex flex-col gap-1 items-end">
+<div class="msg-doctor p-4 rounded-2xl rounded-br-sm rounded-tr-sm text-sm text-white shadow-[0_4px_20px_rgba(0,0,0,0.1)]">
+                            If it persists beyond tomorrow or becomes severe, please let me know immediately and we can adjust the dosage. I'm attaching a brief guide on managing early side effects for this specific class of medication.
+                        </div>
+<!-- Attachment Bubble -->
+<div class="mt-2 p-3 bg-white/10 border border-white/20 rounded-lg flex items-center gap-3 w-64 cursor-pointer hover:bg-white/20 transition-colors backdrop-blur-md">
+<div class="w-10 h-10 rounded bg-white/10 flex items-center justify-center text-white border border-white/20">
+<span class="material-symbols-outlined">description</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-xs font-medium text-white truncate">Lisinopril_Guide.pdf</p>
+<p class="text-[10px] text-gray-300">245 KB</p>
+</div>
+<span class="material-symbols-outlined text-gray-300 text-sm">download</span>
+</div>
+</div>
+</div>
+<!-- Patient Message (Left) -->
+<div class="flex justify-start max-w-3xl">
+<div class="flex gap-3 items-end">
+<img class="w-8 h-8 rounded-full object-cover border border-white/30 shrink-0 mb-1" data-alt="Close up portrait of a middle aged male patient, looking slightly concerned but calm, dramatic cinematic lighting, deep blue and teal tones, glassmorphism UI aesthetic integration." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAarpm7QCT_OT1X6h0yJsSnmbWe3LT8w2Z2bEA-925TakQ1_NNetSL9RRCyna33QNKQ3aTcY79ASCX0p7quukxuPuwZjvMenHoyliHBww2-g-Cq3lMy64Lqjbq3atgfnRI8-xHteUARqVRwmrnV62Uz9FSA8uDYnSx4MXEyjJ23UAzFyQUgvLs5HxitT6znRrlQcpX5zYjo3_2p2GpFQqImboVLL4jfKDTdXuJ0Zy5qQOP1XowyVBbCDQ"/>
+<div class="flex flex-col gap-1">
+<span class="text-[10px] text-gray-300 ml-1">Marcus Vance • 10:42 AM</span>
+<div class="msg-patient p-4 rounded-2xl rounded-bl-sm text-sm text-white shadow-sm">
+                                Thank you, doctor. I'll pick up the prescription today and try taking it with dinner. I'll keep you posted.
+                            </div>
+</div>
+</div>
+</div>
+</div>
+<!-- Input Area -->
+<div class="p-4 border-t border-white/10 bg-white/5 backdrop-blur-xl z-10">
+<div class="flex items-end gap-2">
+<button class="p-3 text-gray-300 hover:text-white transition-colors shrink-0 rounded-full hover:bg-white/10">
+<span class="material-symbols-outlined text-[22px]">attach_file</span>
+</button>
+<div class="flex-1 relative">
+<textarea class="w-full glass-input rounded-xl py-3 px-4 text-sm resize-none min-h-[44px] max-h-32 focus:ring-1 focus:ring-white/50" placeholder="Type a secure message..." rows="1"></textarea>
+</div>
+<button class="p-3 bg-primary/40 text-white border border-white/30 hover:bg-primary transition-all duration-300 shrink-0 rounded-xl shadow-[0_0_15px_rgba(255,255,255,0.1)] group">
+<span class="material-symbols-outlined text-[20px] transform group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform">send</span>
+</button>
+</div>
+<div class="flex justify-between items-center mt-2 px-12">
+<span class="text-[10px] text-gray-400 flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">lock</span>
+                        End-to-end encrypted medical communication
+                    </span>
+<span class="text-[10px] text-gray-400">Press Enter to send, Shift+Enter for new line</span>
+</div>
+</div>
+</section>
+</main>
+</body></html>

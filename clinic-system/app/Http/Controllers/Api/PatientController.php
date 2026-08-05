@@ -7,6 +7,7 @@ use App\Models\Patient;
 use App\Models\Booking;
 use App\Models\Doctor;
 use App\Models\Service;
+use App\Models\Notification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -406,26 +407,98 @@ class PatientController extends Controller
     }
 
     /**
-     * Get patient notifications
+     * Get patient notifications (real data — appointment reschedules,
+     * etc — ordered newest first).
      */
     public function notifications(Request $request)
     {
-        return response()->json([
-            [
-                'id' => 1,
-                'message' => 'Your appointment with Dr. Smith is confirmed for tomorrow at 10:00 AM',
-                'time' => '2 hours ago',
-                'read' => false,
-                'type' => 'appointment'
-            ],
-            [
-                'id' => 2,
-                'message' => 'New health tips available in your dashboard',
-                'time' => '1 day ago',
-                'read' => true,
-                'type' => 'health'
-            ],
-        ]);
+        try {
+            $patient = Patient::where('user_id', Auth::id())->first();
+
+            if (!$patient) {
+                return response()->json([]);
+            }
+
+            $notifications = Notification::where('patient_id', $patient->id)
+                ->orderBy('created_at', 'desc')
+                ->limit(50)
+                ->get();
+
+            return response()->json($notifications->map(function ($n) {
+                return [
+                    'id' => $n->id,
+                    'message' => $n->message,
+                    'type' => $n->type,
+                    'time' => $n->created_at->diffForHumans(),
+                    'read' => $n->read_at !== null,
+                    'booking_id' => $n->booking_id,
+                ];
+            }));
+
+        } catch (\Exception $e) {
+            \Log::error('Notifications fetch error: ' . $e->getMessage());
+            return response()->json([]);
+        }
+    }
+
+    /**
+     * Mark a single notification as read.
+     */
+    public function markNotificationRead(Request $request, $id)
+    {
+        try {
+            $patient = Patient::where('user_id', Auth::id())->first();
+
+            if (!$patient) {
+                return response()->json(['message' => 'Patient profile not found'], 404);
+            }
+
+            $notification = Notification::where('patient_id', $patient->id)->find($id);
+
+            if (!$notification) {
+                return response()->json(['message' => 'Notification not found'], 404);
+            }
+
+            if (!$notification->read_at) {
+                $notification->update(['read_at' => now()]);
+            }
+
+            return response()->json(['message' => 'Notification marked as read']);
+
+        } catch (\Exception $e) {
+            \Log::error('Mark notification read error: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Error marking notification as read',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Mark all of the patient's notifications as read.
+     */
+    public function markAllNotificationsRead(Request $request)
+    {
+        try {
+            $patient = Patient::where('user_id', Auth::id())->first();
+
+            if (!$patient) {
+                return response()->json(['message' => 'Patient profile not found'], 404);
+            }
+
+            Notification::where('patient_id', $patient->id)
+                ->whereNull('read_at')
+                ->update(['read_at' => now()]);
+
+            return response()->json(['message' => 'All notifications marked as read']);
+
+        } catch (\Exception $e) {
+            \Log::error('Mark all notifications read error: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Error marking notifications as read',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
