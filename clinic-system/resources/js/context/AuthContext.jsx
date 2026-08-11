@@ -1,5 +1,6 @@
+// resources/js/context/AuthContext.jsx
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import axios from 'axios';
 import api from '../api/client';
 
 const AuthContext = createContext();
@@ -15,42 +16,22 @@ export const AuthProvider = ({ children }) => {
     const checkAuth = async () => {
         try {
             const response = await api.get('/user');
+            console.log('Auth check - user:', response.data);
             setUser(response.data);
         } catch (error) {
             console.error('Auth check failed:', error.response?.status, error.response?.data);
+            if (error.response?.status === 401) {
+                window.location.href = '/login';
+            }
             setUser(null);
         } finally {
             setLoading(false);
         }
     };
 
-    const login = async (email, password) => {
-        try {
-            const response = await api.post('/login', { email, password });
-            const userResponse = await api.get('/user');
-            setUser(userResponse.data);
-            return { success: true };
-        } catch (error) {
-            console.error('Login error:', error.response?.data);
-            return {
-                success: false,
-                error: error.response?.data?.message || 'Login failed'
-            };
-        }
-    };
-
     const logout = async () => {
         try {
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-            // Note: plain axios here, not the `api` client — `api` has baseURL '/api',
-            // but Laravel's /logout route (from auth.php) is NOT under /api.
-            await axios.post('/logout', {}, {
-                withCredentials: true,
-                headers: {
-                    'X-CSRF-TOKEN': csrfToken,
-                    'Accept': 'application/json',
-                },
-            });
+            await api.post('/logout');
         } catch (error) {
             console.error('Logout error:', error.response?.status, error.response?.data);
         } finally {
@@ -59,8 +40,18 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    const value = {
+        user,
+        setUser,
+        logout,
+        loading,
+        isAuthenticated: !!user,
+        hasRole: (role) => user?.role === role,
+        role: user?.role || null,
+    };
+
     return (
-        <AuthContext.Provider value={{ user, setUser, login, logout, loading }}>
+        <AuthContext.Provider value={value}>
             {children}
         </AuthContext.Provider>
     );

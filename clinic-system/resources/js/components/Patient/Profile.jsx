@@ -1,8 +1,11 @@
+// resources/js/components/patient/PatientProfile.jsx
+
 import React, { useState, useEffect, useRef } from 'react';
 import { 
     Edit, Save, X, Plus, Trash2, Download, FileText, Calendar, 
     User, Phone, Mail, MapPin, Heart, Pill, AlertCircle, Stethoscope, 
-    Lock, Camera, Loader2 
+    Lock, Camera, Loader2, Activity, Clipboard, CheckCircle,
+    Clock, ArrowRight, FileUp, Paperclip, MessageSquare, Eye
 } from 'lucide-react';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
@@ -21,12 +24,21 @@ const PatientProfile = () => {
     });
     const [files, setFiles] = useState([]);
     const [notes, setNotes] = useState([]);
+    const [treatments, setTreatments] = useState([]);
     const [showAddVisit, setShowAddVisit] = useState(false);
     const [newVisit, setNewVisit] = useState({ date: '', service: '', doctor: '', status: 'Scheduled' });
     const [showAddFile, setShowAddFile] = useState(false);
     const [showAddNote, setShowAddNote] = useState(false);
+    const [showAddTreatment, setShowAddTreatment] = useState(false);
     const [newFile, setNewFile] = useState({ name: '', size: '' });
     const [newNote, setNewNote] = useState({ name: '', size: '' });
+    const [newTreatment, setNewTreatment] = useState({
+        name: '',
+        description: '',
+        status: 'ongoing',
+        started_at: new Date().toISOString().split('T')[0],
+        doctor_name: '',
+    });
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState({ type: '', text: '' });
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -59,6 +71,7 @@ const PatientProfile = () => {
         fetchVisits();
         fetchFiles();
         fetchNotes();
+        fetchTreatments();
     }, []);
 
     const formatDate = (dateString) => {
@@ -131,6 +144,20 @@ const PatientProfile = () => {
         }
     };
 
+    const fetchTreatments = async () => {
+        try {
+            const response = await api.get('/patient/treatments');
+            setTreatments(response.data || []);
+        } catch (error) {
+            console.error('Error fetching treatments:', error);
+            // Use mock data if API fails
+            setTreatments([
+                { id: 1, name: 'Physical Therapy', description: 'Rehabilitation for knee injury', status: 'ongoing', started_at: '2024-01-10', doctor_name: 'Dr. Smith' },
+                { id: 2, name: 'Medication Course', description: 'Antibiotics for infection', status: 'completed', started_at: '2024-01-05', doctor_name: 'Dr. Johnson' },
+            ]);
+        }
+    };
+
     const handleEditToggle = () => {
         if (isEditing) {
             setEditForm(profile);
@@ -190,7 +217,6 @@ const PatientProfile = () => {
             });
             console.log('Upload response:', response.data);
             
-            // Update profile with new photo URL
             setProfile((prev) => ({ 
                 ...prev, 
                 photo: response.data.photo,
@@ -200,7 +226,6 @@ const PatientProfile = () => {
             setMessage({ type: 'success', text: 'Profile photo updated!' });
             setTimeout(() => setMessage({ type: '', text: '' }), 3000);
             
-            // Refresh profile to get updated data
             await fetchProfile();
         } catch (error) {
             console.error('Error uploading photo:', error);
@@ -220,8 +245,6 @@ const PatientProfile = () => {
             setProfile((prev) => ({ ...prev, photo: null, photo_url: null }));
             setMessage({ type: 'success', text: 'Profile photo removed' });
             setTimeout(() => setMessage({ type: '', text: '' }), 3000);
-            
-            // Refresh profile to get updated data
             await fetchProfile();
         } catch (error) {
             setMessage({ type: 'error', text: error.response?.data?.message || 'Failed to remove photo' });
@@ -323,6 +346,43 @@ const PatientProfile = () => {
             setTimeout(() => setMessage({ type: '', text: '' }), 3000);
         } catch (error) {
             setMessage({ type: 'error', text: error.response?.data?.message || 'Failed to delete note' });
+        }
+    };
+
+    const handleAddTreatment = async () => {
+        if (!newTreatment.name) {
+            setMessage({ type: 'error', text: 'Please enter a treatment name' });
+            return;
+        }
+
+        try {
+            const response = await api.post('/patient/treatments', newTreatment);
+            setTreatments([...treatments, response.data]);
+            setShowAddTreatment(false);
+            setNewTreatment({ 
+                name: '', 
+                description: '', 
+                status: 'ongoing', 
+                started_at: new Date().toISOString().split('T')[0], 
+                doctor_name: '' 
+            });
+            setMessage({ type: 'success', text: 'Treatment added successfully!' });
+            setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+        } catch (error) {
+            setMessage({ type: 'error', text: error.response?.data?.message || 'Failed to add treatment' });
+        }
+    };
+
+    const handleDeleteTreatment = async (treatmentId) => {
+        if (!window.confirm('Are you sure you want to delete this treatment?')) return;
+
+        try {
+            await api.delete(`/patient/treatments/${treatmentId}`);
+            setTreatments(treatments.filter(t => t.id !== treatmentId));
+            setMessage({ type: 'success', text: 'Treatment deleted successfully!' });
+            setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+        } catch (error) {
+            setMessage({ type: 'error', text: error.response?.data?.message || 'Failed to delete treatment' });
         }
     };
 
@@ -429,11 +489,9 @@ const PatientProfile = () => {
         );
     };
 
-    // Helper function to get the correct photo URL
     const getPhotoUrl = () => {
         if (!profile?.photo_url) return null;
         let url = profile.photo_url;
-        // Ensure the URL has the correct port
         if (url.includes('localhost/storage') && !url.includes('localhost:8000')) {
             url = url.replace('localhost/storage', 'localhost:8000/storage');
         }
@@ -452,7 +510,7 @@ const PatientProfile = () => {
     }
 
     return (
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-7xl mx-auto p-6">
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
                 <h1 className="text-2xl font-bold text-slate-800">Patient Profile</h1>
@@ -492,7 +550,7 @@ const PatientProfile = () => {
                 {/* Left Column - Profile Info */}
                 <div className="lg:col-span-1">
                     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-                        {/* Avatar Section - FIXED */}
+                        {/* Avatar Section */}
                         <div className="flex flex-col items-center text-center pb-4 border-b border-slate-100">
                             <div className="relative mb-3">
                                 <div className="w-24 h-24 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 flex items-center justify-center text-white text-3xl font-bold overflow-hidden">
@@ -521,7 +579,6 @@ const PatientProfile = () => {
                                     )}
                                 </div>
 
-                                {/* Upload button */}
                                 <button
                                     onClick={handlePhotoSelect}
                                     disabled={uploadingPhoto}
@@ -553,7 +610,6 @@ const PatientProfile = () => {
                                 </button>
                             )}
                             
-                            {/* Name - Editable */}
                             <div className="w-full">
                                 {isEditing ? (
                                     <input
@@ -571,13 +627,11 @@ const PatientProfile = () => {
                                 )}
                             </div>
                             
-                            {/* Email - Read Only */}
                             <p className="text-sm text-slate-500 mt-1">
                                 {profile?.email || user?.email || 'No email'}
                                 <span className="ml-1 text-[10px] text-slate-400">(read-only)</span>
                             </p>
                             
-                            {/* Phone - Editable */}
                             <div className="w-full mt-1">
                                 {isEditing ? (
                                     <input
@@ -606,7 +660,6 @@ const PatientProfile = () => {
                             {renderField('Address', 'address', profile?.address)}
                         </div>
 
-                        {/* Patient-Filled Section */}
                         <div className="mt-4 pt-4 border-t border-slate-100">
                             <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
                                 <Heart className="w-3 h-3 text-red-500" /> Medical History (Self-Reported)
@@ -616,7 +669,6 @@ const PatientProfile = () => {
                             {renderField('Emergency Contact', 'emergency_contact', profile?.emergency_contact)}
                         </div>
 
-                        {/* Doctor-Filled Section - View Only */}
                         <div className="mt-4 pt-4 border-t border-slate-100 bg-slate-50/50 rounded-lg p-4">
                             <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
                                 <Stethoscope className="w-3 h-3 text-blue-600" /> Clinical Records
@@ -637,7 +689,7 @@ const PatientProfile = () => {
                     </div>
                 </div>
 
-                {/* Right Column - Visits, Files, Notes */}
+                {/* Right Column - Visits, Treatments, Files, Notes */}
                 <div className="lg:col-span-2 space-y-6">
                     {/* Visits Section */}
                     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
@@ -662,16 +714,6 @@ const PatientProfile = () => {
                                     }`}
                                 >
                                     Past ({visits.past.length})
-                                </button>
-                                <button 
-                                    onClick={() => setActiveTab('treatments')}
-                                    className={`px-4 py-2 text-sm font-medium rounded-lg transition ${
-                                        activeTab === 'treatments' 
-                                            ? 'bg-blue-600 text-white' 
-                                            : 'text-slate-600 hover:bg-slate-100'
-                                    }`}
-                                >
-                                    Treatments
                                 </button>
                             </div>
                             <button 
@@ -747,9 +789,7 @@ const PatientProfile = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">
-                                    {(activeTab === 'future' ? visits.future : 
-                                      activeTab === 'past' ? visits.past : 
-                                      visits.treatments).map((visit, index) => (
+                                    {(activeTab === 'future' ? visits.future : visits.past).map((visit, index) => (
                                         <tr key={index} className="text-sm hover:bg-slate-50 transition">
                                             <td className="py-3 text-slate-700">{visit.date}</td>
                                             <td className="py-3 text-slate-700">{visit.service}</td>
@@ -774,10 +814,146 @@ const PatientProfile = () => {
                         </div>
                     </div>
 
+                    {/* Treatments Section */}
+                    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2">
+                                <Activity className="w-4 h-4 text-blue-600" />
+                                <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Treatments</h4>
+                            </div>
+                            <button 
+                                onClick={() => setShowAddTreatment(true)}
+                                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition flex items-center gap-1"
+                            >
+                                <Plus className="w-3 h-3" /> Add
+                            </button>
+                        </div>
+
+                        {showAddTreatment && (
+                            <div className="mb-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                                <h4 className="text-sm font-semibold text-slate-700 mb-3">Add New Treatment</h4>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <input
+                                        type="text"
+                                        value={newTreatment.name}
+                                        onChange={(e) => setNewTreatment({...newTreatment, name: e.target.value})}
+                                        className="px-3 py-2 border border-slate-300 rounded-lg text-sm col-span-2"
+                                        placeholder="Treatment name *"
+                                    />
+                                    <textarea
+                                        value={newTreatment.description}
+                                        onChange={(e) => setNewTreatment({...newTreatment, description: e.target.value})}
+                                        className="px-3 py-2 border border-slate-300 rounded-lg text-sm col-span-2"
+                                        placeholder="Description"
+                                        rows="2"
+                                    />
+                                    <select
+                                        value={newTreatment.status}
+                                        onChange={(e) => setNewTreatment({...newTreatment, status: e.target.value})}
+                                        className="px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                                    >
+                                        <option value="ongoing">Ongoing</option>
+                                        <option value="completed">Completed</option>
+                                        <option value="planned">Planned</option>
+                                        <option value="on_hold">On Hold</option>
+                                    </select>
+                                    <input
+                                        type="date"
+                                        value={newTreatment.started_at}
+                                        onChange={(e) => setNewTreatment({...newTreatment, started_at: e.target.value})}
+                                        className="px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                                    />
+                                    <input
+                                        type="text"
+                                        value={newTreatment.doctor_name}
+                                        onChange={(e) => setNewTreatment({...newTreatment, doctor_name: e.target.value})}
+                                        className="px-3 py-2 border border-slate-300 rounded-lg text-sm col-span-2"
+                                        placeholder="Doctor name"
+                                    />
+                                </div>
+                                <div className="flex gap-2 mt-3">
+                                    <button
+                                        onClick={handleAddTreatment}
+                                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-lg transition"
+                                    >
+                                        Save
+                                    </button>
+                                    <button
+                                        onClick={() => setShowAddTreatment(false)}
+                                        className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-medium rounded-lg transition"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="space-y-3">
+                            {treatments.length === 0 ? (
+                                <div className="text-center py-6 text-slate-400">
+                                    <Clipboard className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                                    <p className="text-sm">No treatments yet</p>
+                                </div>
+                            ) : (
+                                treatments.map((treatment) => {
+                                    const statusColors = {
+                                        ongoing: 'bg-emerald-100 text-emerald-700',
+                                        completed: 'bg-blue-100 text-blue-700',
+                                        planned: 'bg-amber-100 text-amber-700',
+                                        on_hold: 'bg-slate-100 text-slate-700'
+                                    };
+                                    const statusIcons = {
+                                        ongoing: <Activity className="w-3 h-3" />,
+                                        completed: <CheckCircle className="w-3 h-3" />,
+                                        planned: <Clock className="w-3 h-3" />,
+                                        on_hold: <AlertCircle className="w-3 h-3" />
+                                    };
+                                    
+                                    return (
+                                        <div key={treatment.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition group">
+                                            <div className="flex items-center gap-3 flex-1">
+                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                                                    treatment.status === 'ongoing' ? 'bg-emerald-100 text-emerald-600' :
+                                                    treatment.status === 'completed' ? 'bg-blue-100 text-blue-600' :
+                                                    'bg-amber-100 text-amber-600'
+                                                }`}>
+                                                    {statusIcons[treatment.status] || <Activity className="w-4 h-4" />}
+                                                </div>
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <p className="text-sm text-slate-700 font-medium">{treatment.name}</p>
+                                                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[treatment.status] || 'bg-slate-100 text-slate-700'}`}>
+                                                            {treatment.status}
+                                                        </span>
+                                                    </div>
+                                                    {treatment.description && (
+                                                        <p className="text-xs text-slate-500 mt-0.5">{treatment.description}</p>
+                                                    )}
+                                                    <div className="flex items-center gap-3 mt-1 text-xs text-slate-400">
+                                                        <span>Started: {formatDate(treatment.started_at)}</span>
+                                                        {treatment.doctor_name && <span>• Doctor: {treatment.doctor_name}</span>}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={() => handleDeleteTreatment(treatment.id)}
+                                                className="text-red-600 hover:text-red-800 transition opacity-0 group-hover:opacity-100"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    );
+                                })
+                            )}
+                        </div>
+                    </div>
+
                     {/* Files Section */}
                     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
                         <div className="flex items-center justify-between mb-4">
-                            <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Files</h4>
+                            <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                                <FileText className="w-4 h-4" /> Files
+                            </h4>
                             <button 
                                 onClick={() => setShowAddFile(true)}
                                 className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition flex items-center gap-1"
@@ -823,9 +999,9 @@ const PatientProfile = () => {
                         )}
 
                         {files.length === 0 ? (
-                            <div className="text-center py-8 text-slate-400">
-                                <FileText className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                                <p className="text-sm">No files yet</p>
+                            <div className="text-center py-6 text-slate-400">
+                                <FileUp className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                                <p className="text-sm">No files uploaded</p>
                             </div>
                         ) : (
                             <div className="grid grid-cols-2 gap-2">
@@ -860,7 +1036,9 @@ const PatientProfile = () => {
                     {/* Notes Section */}
                     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
                         <div className="flex items-center justify-between mb-4">
-                            <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Notes</h4>
+                            <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                                <MessageSquare className="w-4 h-4" /> Notes
+                            </h4>
                             <button 
                                 onClick={() => setShowAddNote(true)}
                                 className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition flex items-center gap-1"
@@ -906,8 +1084,8 @@ const PatientProfile = () => {
                         )}
 
                         {notes.length === 0 ? (
-                            <div className="text-center py-8 text-slate-400">
-                                <FileText className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                            <div className="text-center py-6 text-slate-400">
+                                <Paperclip className="w-8 h-8 mx-auto mb-2 opacity-30" />
                                 <p className="text-sm">No notes yet</p>
                             </div>
                         ) : (
@@ -916,7 +1094,7 @@ const PatientProfile = () => {
                                     <div key={note.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition group">
                                         <div className="flex items-center gap-3">
                                             <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center text-amber-600 text-xs font-bold">
-                                                <FileText className="w-4 h-4" />
+                                                <Paperclip className="w-4 h-4" />
                                             </div>
                                             <div>
                                                 <p className="text-sm text-slate-700 font-medium">{note.name}</p>
@@ -925,7 +1103,7 @@ const PatientProfile = () => {
                                         </div>
                                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
                                             <button className="p-1 text-blue-600 hover:text-blue-800 transition">
-                                                <Download className="w-4 h-4" />
+                                                <Eye className="w-4 h-4" />
                                             </button>
                                             <button
                                                 onClick={() => handleDeleteNote(note.id)}

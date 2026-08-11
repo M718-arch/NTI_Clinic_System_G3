@@ -69,6 +69,10 @@ class RegisteredUserController extends Controller
                     'chronic_diseases' => $request->patient_chronic_diseases ?? 'None',
                     'medical_history' => $request->patient_medical_history ?? 'None',
                     'status' => true,
+                    // Phase 5: self-registered patients start pending and
+                    // are reviewed by a receptionist. See Patient
+                    // Registration Workflow in the roadmap.
+                    'approval_status' => 'pending',
                 ]);
             } else {
                 Doctor::create([
@@ -82,6 +86,19 @@ class RegisteredUserController extends Controller
             }
 
             DB::commit();
+
+            // Patients cannot log in until approved (see
+            // AuthenticatedSessionController), so don't auto-login them —
+            // send them back to a confirmation state instead. Doctors have
+            // no approval workflow in this phase, so their behavior is
+            // unchanged.
+            if ($request->role === 'patient') {
+                return redirect()->route('login')->with(
+                    'status',
+                    'Thanks for registering! Your account is pending review by our staff. '
+                    . 'You will be able to log in once it has been approved.'
+                );
+            }
 
             auth()->login($user);
 

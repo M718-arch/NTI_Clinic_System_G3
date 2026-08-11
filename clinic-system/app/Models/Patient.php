@@ -29,12 +29,18 @@ class Patient extends Model
         'family_history',
         'past_surgeries',
         'status',
-        'photo',  // ← MUST BE HERE
+        'photo',
+        // Phase 5 — patient registration/approval workflow
+        'approval_status',
+        'approved_by',
+        'approved_at',
+        'rejection_reason',
     ];
 
     protected $casts = [
         'date_of_birth' => 'date',
         'status' => 'boolean',
+        'approved_at' => 'datetime',
     ];
 
     public function user(): BelongsTo
@@ -42,9 +48,54 @@ class Patient extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function approvedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
     public function bookings()
     {
         return $this->hasMany(Booking::class, 'patient_id');
+    }
+
+    /**
+     * Phase 8 EMR relationships. These were missing entirely — Diagnosis/
+     * LabResult/RadiologyResult/Prescription all had `belongsTo(Patient)`
+     * defined, but Patient never had the inverse `hasMany`. Any code
+     * calling `$patient->diagnoses`, `$patient->load('diagnoses')`, or
+     * `$patient->diagnoses()->create(...)` was throwing
+     * "Call to undefined relationship" — this is that fix.
+     *
+     * NOTE: `diagnoses()` (the relationship, plural, callable) is a
+     * different thing from the `diagnoses` *column* already in
+     * $fillable above — that's a legacy free-text field from before
+     * Phase 8's structured Diagnosis model existed. Eloquent lets both
+     * coexist (attribute access `$patient->diagnoses` on a loaded model
+     * returns the column value unless the relationship has been
+     * eager-loaded/queried, in which case the relationship takes
+     * precedence for `$patient->diagnoses` after `load()`/`with()`).
+     * If you're seeing unexpected values from `$patient->diagnoses`
+     * elsewhere in the app (outside the EMR feature), this naming
+     * collision is why — consider renaming one of the two.
+     */
+    public function diagnoses()
+    {
+        return $this->hasMany(Diagnosis::class);
+    }
+
+    public function labResults()
+    {
+        return $this->hasMany(LabResult::class);
+    }
+
+    public function radiologyResults()
+    {
+        return $this->hasMany(RadiologyResult::class);
+    }
+
+    public function prescriptions()
+    {
+        return $this->hasMany(Prescription::class);
     }
 
     public function getFullNameAttribute()
@@ -58,5 +109,25 @@ class Patient extends Model
             return asset('storage/' . $this->photo);
         }
         return null;
+    }
+
+    public function isApproved(): bool
+    {
+        return $this->approval_status === 'approved';
+    }
+
+    public function scopePending($query)
+    {
+        return $query->where('approval_status', 'pending');
+    }
+
+    public function scopeApproved($query)
+    {
+        return $query->where('approval_status', 'approved');
+    }
+
+    public function scopeRejected($query)
+    {
+        return $query->where('approval_status', 'rejected');
     }
 }

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/client';
+import PatientEmr from './PatientEmr';
+import NotificationBell from './NotificationBell';
 
 // ---------------------------------------------------------------------------
 // Clinical Clarity Glass — tokens copied 1:1 from the reference mockup

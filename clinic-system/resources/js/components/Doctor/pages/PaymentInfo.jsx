@@ -9,9 +9,10 @@ export const PaymentInfo = () => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [stats, setStats] = useState({
-        totalRevenue: 124500.00,
-        paidInvoices: 342,
-        pendingPayments: 8240.50
+        totalRevenue: 0,
+        paidInvoices: 0,
+        pendingPayments: 0,
+        overdueCount: 0
     });
 
     useEffect(() => {
@@ -81,12 +82,7 @@ export const PaymentInfo = () => {
         );
     });
 
-    const displayInvoices = filteredInvoices.length > 0 ? filteredInvoices : [
-        { id: 1, patient: { name: 'Sarah Jenkins' }, service: 'Neurological Consult', date: '2024-10-24', amount: 450.00, status: 'paid' },
-        { id: 2, patient: { name: 'Marcus Chen' }, service: 'MRI Scan - Lumbar', date: '2024-10-22', amount: 1200.00, status: 'pending' },
-        { id: 3, patient: { name: 'Elena Rodriguez' }, service: 'Physical Therapy Session', date: '2024-09-15', amount: 150.00, status: 'overdue' },
-        { id: 4, patient: { name: 'Margaret Vance' }, service: 'Annual Comprehensive Checkup', date: '2024-10-20', amount: 350.00, status: 'paid' }
-    ];
+    const displayInvoices = filteredInvoices;
 
     if (loading) {
         return (
@@ -150,10 +146,6 @@ export const PaymentInfo = () => {
                         <div className="text-3xl font-headline font-bold text-[#252f43] glow-text relative z-10 mb-2">
                             ${stats.totalRevenue?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
                         </div>
-                        <div className="text-[#006382] text-sm flex items-center gap-1 relative z-10 font-medium">
-                            <span className="material-symbols-outlined text-[14px]">trending_up</span>
-                            <span>+12.5% from last month</span>
-                        </div>
                     </div>
 
                     <div className="glass-panel p-6 rounded-2xl relative overflow-hidden group animate-fade-in-up cursor-pointer hover:shadow-[0_8px_40px_rgba(74,222,128,0.15)] transition-all duration-300" style={{ animationDelay: '0.25s' }}>
@@ -195,7 +187,7 @@ export const PaymentInfo = () => {
                         </div>
                         <div className="text-[#991b1b] text-sm flex items-center gap-1 relative z-10 font-medium">
                             <span className="material-symbols-outlined text-[14px]">warning</span>
-                            <span>4 invoices overdue</span>
+                            <span>{stats.overdueCount || 0} invoice{stats.overdueCount === 1 ? '' : 's'} overdue</span>
                         </div>
                     </div>
                 </div>
@@ -219,25 +211,33 @@ export const PaymentInfo = () => {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-white/20">
-                                {displayInvoices.map((invoice) => (
-                                    <tr key={invoice.id} className="hover:bg-white/30 transition-colors group">
-                                        <td className="px-6 py-4 font-medium flex items-center gap-3">
-                                            <div className="h-8 w-8 rounded-full overflow-hidden border border-white/40 shadow-sm bg-white/50 flex items-center justify-center text-[#252f43] font-bold group-hover:border-[#006382]/40 transition-all duration-300">
-                                                {invoice.patient?.name?.charAt(0) || 'P'}
-                                            </div>
-                                            <span className="text-[#252f43] font-semibold group-hover:text-[#006382] transition-colors duration-300">{invoice.patient?.name || 'Unknown'}</span>
-                                        </td>
-                                        <td className="px-6 py-4 text-sm text-[#525b72] font-medium">{invoice.service || 'N/A'}</td>
-                                        <td className="px-6 py-4 text-sm text-[#525b72] font-medium">{formatDate(invoice.date)}</td>
-                                        <td className="px-6 py-4 text-sm font-semibold text-[#252f43]">${invoice.amount?.toFixed(2) || '0.00'}</td>
-                                        <td className="px-6 py-4">{getStatusBadge(invoice.status)}</td>
-                                        <td className="px-6 py-4 text-right">
-                                            <button className="p-2 text-[#525b72] hover:text-[#006382] transition-colors rounded-full hover:bg-white/50">
-                                                <span className="material-symbols-outlined">more_vert</span>
-                                            </button>
+                                {displayInvoices.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={6} className="px-6 py-12 text-center text-[#525b72]">
+                                            {searchTerm ? 'No invoices match your search.' : 'No invoices yet.'}
                                         </td>
                                     </tr>
-                                ))}
+                                ) : (
+                                    displayInvoices.map((invoice) => (
+                                        <tr key={invoice.id} className="hover:bg-white/30 transition-colors group">
+                                            <td className="px-6 py-4 font-medium flex items-center gap-3">
+                                                <div className="h-8 w-8 rounded-full overflow-hidden border border-white/40 shadow-sm bg-white/50 flex items-center justify-center text-[#252f43] font-bold group-hover:border-[#006382]/40 transition-all duration-300">
+                                                    {invoice.patient?.name?.charAt(0) || 'P'}
+                                                </div>
+                                                <span className="text-[#252f43] font-semibold group-hover:text-[#006382] transition-colors duration-300">{invoice.patient?.name || 'Unknown'}</span>
+                                            </td>
+                                            <td className="px-6 py-4 text-sm text-[#525b72] font-medium">{invoice.service || 'N/A'}</td>
+                                            <td className="px-6 py-4 text-sm text-[#525b72] font-medium">{formatDate(invoice.date)}</td>
+                                            <td className="px-6 py-4 text-sm font-semibold text-[#252f43]">${invoice.amount?.toFixed(2) || '0.00'}</td>
+                                            <td className="px-6 py-4">{getStatusBadge(invoice.status)}</td>
+                                            <td className="px-6 py-4 text-right">
+                                                <button className="p-2 text-[#525b72] hover:text-[#006382] transition-colors rounded-full hover:bg-white/50">
+                                                    <span className="material-symbols-outlined">more_vert</span>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
                             </tbody>
                         </table>
                     </div>

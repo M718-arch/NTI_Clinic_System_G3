@@ -1,4 +1,5 @@
 <?php
+// app/Http/Controllers/Api/AppointmentController.php
 
 namespace App\Http\Controllers\Api;
 
@@ -44,12 +45,7 @@ class AppointmentController extends Controller
 
     /**
      * Overwrite `service.doctor.name` on a booking (or collection of
-     * bookings) with the resolved name, so every endpoint that serializes
-     * a booking agrees on the doctor's display name — whether it comes
-     * from `full_name` or falls back to the linked user's `name`.
-     *
-     * This mutates an *appended/attribute* value on the already-loaded
-     * relation, it does not touch the database.
+     * bookings) with the resolved name.
      */
     private function withResolvedDoctorName($bookings)
     {
@@ -61,9 +57,6 @@ class AppointmentController extends Controller
         $items->each(function ($booking) {
             $doctor = $booking->service->doctor ?? null;
             if ($doctor) {
-                // Dynamically set/override the `name` attribute on the
-                // already-loaded doctor model so it serializes correctly,
-                // without persisting anything to the database.
                 $doctor->name = $this->resolveDoctorName($doctor) ?? 'N/A';
             }
         });
@@ -72,8 +65,7 @@ class AppointmentController extends Controller
     }
 
     /**
-     * Format a booking's date+time into a friendly string for
-     * notification messages, e.g. "Aug 6, 2026 at 9:00 AM".
+     * Format a booking's date+time into a friendly string for notifications.
      */
     private function formatBookingDateTime($date, $time)
     {
@@ -199,13 +191,6 @@ class AppointmentController extends Controller
                 ->orderBy('time', 'desc')
                 ->get();
 
-            // Make sure `booking.service.doctor.name` is populated the same
-            // way as the /upcoming and /past endpoints (full_name, falling
-            // back to the linked user's name — see resolveDoctorName()).
-            // This endpoint returns raw Eloquent models, unlike the two
-            // above which hand-build the response array, so without this
-            // the frontend's `booking.service?.doctor?.name` was reading a
-            // field that never got set.
             $this->withResolvedDoctorName($bookings);
 
             $now = now();
@@ -247,18 +232,10 @@ class AppointmentController extends Controller
         try {
             \Log::info('Booking attempt - Full request:', $request->all());
 
-            // Accept both field names
             $date = $request->appointment_date ?? $request->date;
             $time = $request->appointment_time ?? $request->time;
             $service_id = $request->service_id;
             $notes = $request->notes;
-
-            \Log::info('Parsed booking data:', [
-                'service_id' => $service_id,
-                'date' => $date,
-                'time' => $time,
-                'notes' => $notes
-            ]);
 
             $validator = Validator::make([
                 'service_id' => $service_id,
@@ -273,14 +250,12 @@ class AppointmentController extends Controller
             ]);
 
             if ($validator->fails()) {
-                \Log::error('Validation failed:', $validator->errors()->toArray());
                 return response()->json(['errors' => $validator->errors()], 422);
             }
 
             $user = Auth::user();
             $patient = Patient::where('user_id', $user->id)->first();
 
-            // Auto-create patient if not exists
             if (!$patient) {
                 \Log::info('Patient not found, creating one for user: ' . $user->id);
                 
@@ -291,6 +266,7 @@ class AppointmentController extends Controller
                     'email' => $user->email,
                     'phone' => $user->phone ?? '',
                     'status' => 'active',
+                    'approval_status' => 'approved',
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
@@ -298,14 +274,20 @@ class AppointmentController extends Controller
                 \Log::info('Patient created: ' . $patient->id);
             }
 
+            if ($patient->approval_status !== 'approved') {
+                return response()->json([
+                    'message' => $patient->approval_status === 'pending'
+                        ? 'Your account is pending approval. You will be able to book once a staff member approves your registration.'
+                        : 'Your account registration was not approved. Please contact the clinic.'
+                ], 403);
+            }
+
             $service = Service::find($service_id);
 
             if (!$service) {
-                \Log::error('Service not found: ' . $service_id);
                 return response()->json(['message' => 'Service not found'], 404);
             }
 
-            // Check if slot is available
             $exists = Booking::where('service_id', $service_id)
                 ->where('date', $date)
                 ->where('time', $time)
@@ -330,6 +312,14 @@ class AppointmentController extends Controller
 
             \Log::info('Booking created:', $booking->toArray());
 
+            // Phase 8: "Appointment Booked" notification
+            Notification::create([
+                'patient_id' => $patient->id,
+                'booking_id' => $booking->id,
+                'type' => 'appointment_booked',
+                'message' => "Your {$service->name} appointment on {$this->formatBookingDateTime($date, $time)} has been booked and is awaiting confirmation.",
+            ]);
+
             return response()->json([
                 'message' => 'Booking created successfully',
                 'data' => $booking
@@ -337,7 +327,6 @@ class AppointmentController extends Controller
 
         } catch (\Exception $e) {
             \Log::error('Booking creation error: ' . $e->getMessage());
-            \Log::error('Stack trace: ' . $e->getTraceAsString());
             return response()->json([
                 'message' => 'Error creating booking',
                 'error' => $e->getMessage()
@@ -346,18 +335,35 @@ class AppointmentController extends Controller
     }
 
     /**
-     * Cancel a booking (patient cancels)
+     * Cancel a booking. Phase 8: Fixed role-based authorization for
+     * patient, doctor, and admin. Also clears queue_status.
      */
     public function cancel(Request $request, Booking $booking)
     {
         try {
-            $patient = Patient::where('user_id', Auth::id())->first();
+            $user = $request->user();
 
-            if (!$patient) {
-                return response()->json(['message' => 'Patient not found'], 404);
-            }
+            if ($user->role === 'patient') {
+                $patient = Patient::where('user_id', $user->id)->first();
 
-            if ($booking->patient_id !== $patient->id) {
+                if (!$patient) {
+                    return response()->json(['message' => 'Patient not found'], 404);
+                }
+
+                if ($booking->patient_id !== $patient->id) {
+                    return response()->json(['message' => 'Unauthorized'], 403);
+                }
+            } elseif ($user->role === 'doctor') {
+                $doctor = $user->doctor;
+
+                if (!$doctor) {
+                    return response()->json(['message' => 'Doctor not found'], 404);
+                }
+
+                if ($booking->service->doctor_id !== $doctor->id) {
+                    return response()->json(['message' => 'Unauthorized'], 403);
+                }
+            } elseif ($user->role !== 'admin') {
                 return response()->json(['message' => 'Unauthorized'], 403);
             }
 
@@ -369,7 +375,24 @@ class AppointmentController extends Controller
                 return response()->json(['message' => 'Completed bookings cannot be cancelled'], 400);
             }
 
-            $booking->update(['status' => 'cancelled']);
+            // Phase 8: Clear queue status when cancelling
+            $booking->update([
+                'status' => 'cancelled',
+                'queue_status' => null,
+                'room' => null,
+                'called_at' => null,
+            ]);
+
+            // Phase 8: "Appointment Cancelled" notification
+            if ($booking->patient_id) {
+                $serviceName = $booking->service->name ?? 'your appointment';
+                Notification::create([
+                    'patient_id' => $booking->patient_id,
+                    'booking_id' => $booking->id,
+                    'type' => 'appointment_cancelled',
+                    'message' => "Your {$serviceName} appointment on {$this->formatBookingDateTime($booking->date, $booking->time)} was cancelled.",
+                ]);
+            }
 
             return response()->json([
                 'message' => 'Booking cancelled successfully',
@@ -386,81 +409,78 @@ class AppointmentController extends Controller
     }
 
     /**
- * Update a booking (patient updates)
- */
-public function update(Request $request, Booking $booking)
-{
-    try {
-        $patient = Patient::where('user_id', Auth::id())->first();
+     * Update a booking (patient updates)
+     */
+    public function update(Request $request, Booking $booking)
+    {
+        try {
+            $patient = Patient::where('user_id', Auth::id())->first();
 
-        if (!$patient) {
-            return response()->json(['message' => 'Patient not found'], 404);
-        }
+            if (!$patient) {
+                return response()->json(['message' => 'Patient not found'], 404);
+            }
 
-        if ($booking->patient_id !== $patient->id) {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
+            if ($booking->patient_id !== $patient->id) {
+                return response()->json(['message' => 'Unauthorized'], 403);
+            }
 
-        if ($booking->status === 'cancelled') {
-            return response()->json(['message' => 'Cancelled bookings cannot be updated'], 400);
-        }
+            if ($booking->status === 'cancelled') {
+                return response()->json(['message' => 'Cancelled bookings cannot be updated'], 400);
+            }
 
-        if ($booking->status === 'completed') {
-            return response()->json(['message' => 'Completed bookings cannot be updated'], 400);
-        }
+            if ($booking->status === 'completed') {
+                return response()->json(['message' => 'Completed bookings cannot be updated'], 400);
+            }
 
-        // Accept both field names (date/appointment_date and time/appointment_time)
-        $date = $request->date ?? $request->appointment_date;
-        $time = $request->time ?? $request->appointment_time;
+            $date = $request->date ?? $request->appointment_date;
+            $time = $request->time ?? $request->appointment_time;
 
-        $validator = Validator::make([
-            'date' => $date,
-            'time' => $time,
-            'notes' => $request->notes
-        ], [
-            'date' => 'required|date|after_or_equal:today',
-            'time' => 'required|date_format:H:i',
-            'notes' => 'nullable|string|max:500',
-        ]);
+            $validator = Validator::make([
+                'date' => $date,
+                'time' => $time,
+                'notes' => $request->notes
+            ], [
+                'date' => 'required|date|after_or_equal:today',
+                'time' => 'required|date_format:H:i',
+                'notes' => 'nullable|string|max:500',
+            ]);
 
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
+            if ($validator->fails()) {
+                return response()->json(['errors' => $validator->errors()], 422);
+            }
 
-        // Check if slot is available
-        $exists = Booking::where('service_id', $booking->service_id)
-            ->where('date', $date)
-            ->where('time', $time)
-            ->where('id', '!=', $booking->id)
-            ->whereIn('status', ['pending', 'confirmed'])
-            ->exists();
+            $exists = Booking::where('service_id', $booking->service_id)
+                ->where('date', $date)
+                ->where('time', $time)
+                ->where('id', '!=', $booking->id)
+                ->whereIn('status', ['pending', 'confirmed'])
+                ->exists();
 
-        if ($exists) {
+            if ($exists) {
+                return response()->json([
+                    'message' => 'This time slot is already booked'
+                ], 409);
+            }
+
+            $booking->update([
+                'date' => $date,
+                'time' => $time,
+                'notes' => $request->notes ?? $booking->notes,
+            ]);
+
             return response()->json([
-                'message' => 'This time slot is already booked'
-            ], 409);
+                'message' => 'Booking updated successfully',
+                'data' => $booking->load(['service', 'service.doctor.user'])
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Update booking error: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Error updating booking',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        $booking->update([
-            'date' => $date,
-            'time' => $time,
-            'notes' => $request->notes ?? $booking->notes,
-        ]);
-
-        return response()->json([
-            'message' => 'Booking updated successfully',
-            'data' => $booking->load(['service', 'service.doctor.user'])
-        ]);
-
-    } catch (\Exception $e) {
-        \Log::error('Update booking error: ' . $e->getMessage());
-        \Log::error('Stack trace: ' . $e->getTraceAsString());
-        return response()->json([
-            'message' => 'Error updating booking',
-            'error' => $e->getMessage()
-        ], 500);
     }
-}
 
     /**
      * Get doctor's bookings
@@ -484,9 +504,6 @@ public function update(Request $request, Booking $booking)
             ->orderBy('time', 'desc')
             ->get();
 
-            // Patient has no `name` column of its own — it lives on the linked
-            // User. Set it as a dynamic attribute so it serializes into the
-            // JSON response the same way `booking.patient?.name` expects it.
             $bookings->each(function ($booking) {
                 if ($booking->patient) {
                     $resolvedName = trim((string) ($booking->patient->user->name ?? ''));
@@ -527,6 +544,14 @@ public function update(Request $request, Booking $booking)
 
             $booking->update(['status' => 'confirmed']);
 
+            // Phase 8: "Appointment Approved" notification
+            Notification::create([
+                'patient_id' => $booking->patient_id,
+                'booking_id' => $booking->id,
+                'type' => 'appointment_approved',
+                'message' => "Your {$booking->service->name} appointment on {$this->formatBookingDateTime($booking->date, $booking->time)} has been confirmed.",
+            ]);
+
             return response()->json([
                 'message' => 'Booking accepted successfully',
                 'data' => $booking->load(['patient', 'service'])
@@ -542,8 +567,53 @@ public function update(Request $request, Booking $booking)
     }
 
     /**
+     * Update a booking's status directly.
+     */
+    public function updateStatus(Request $request, Booking $booking)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'status' => 'required|in:pending,confirmed,completed,cancelled',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json(['errors' => $validator->errors()], 422);
+            }
+
+            $user = $request->user();
+
+            if ($user->role === 'doctor') {
+                $doctor = $user->doctor;
+
+                if (!$doctor) {
+                    return response()->json(['message' => 'Doctor profile not found'], 404);
+                }
+
+                if ($booking->service->doctor_id !== $doctor->id) {
+                    return response()->json(['message' => 'Unauthorized'], 403);
+                }
+            } elseif ($user->role !== 'admin') {
+                return response()->json(['message' => 'Unauthorized'], 403);
+            }
+
+            $booking->update(['status' => $request->status]);
+
+            return response()->json([
+                'message' => 'Booking status updated successfully',
+                'data' => $booking->load(['patient', 'service.doctor.user'])
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Update booking status error: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Error updating booking status',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Update a booking (doctor updates) — including drag/drop reschedules
-     * from the doctor's calendar.
      */
     public function updateByDoctor(Request $request, Booking $booking)
     {
@@ -558,7 +628,6 @@ public function update(Request $request, Booking $booking)
                 return response()->json(['message' => 'Unauthorized'], 403);
             }
 
-            // Accept both field names
             $date = $request->date ?? $request->appointment_date;
             $time = $request->time ?? $request->appointment_time;
 
@@ -576,7 +645,6 @@ public function update(Request $request, Booking $booking)
                 return response()->json(['errors' => $validator->errors()], 422);
             }
 
-            // Check if slot is available
             $exists = Booking::where('service_id', $booking->service_id)
                 ->where('date', $date)
                 ->where('time', $time)
@@ -590,9 +658,6 @@ public function update(Request $request, Booking $booking)
                 ], 409);
             }
 
-            // Capture the old date/time before overwriting, so we can tell
-            // whether this was an actual reschedule (vs. e.g. only notes
-            // changing) and word the notification accordingly.
             $oldDate = $booking->date;
             $oldTime = $booking->time;
             $dateChanged = $oldDate !== $date || $oldTime !== $time;
@@ -603,8 +668,6 @@ public function update(Request $request, Booking $booking)
                 'notes' => $request->notes ?? $booking->notes,
             ]);
 
-            // Notify the patient when the doctor actually moved the
-            // appointment to a different date/time.
             if ($dateChanged && $booking->patient_id) {
                 $serviceName = $booking->service->name ?? 'your appointment';
                 $newWhen = $this->formatBookingDateTime($date, $time);
@@ -624,7 +687,6 @@ public function update(Request $request, Booking $booking)
 
         } catch (\Exception $e) {
             \Log::error('Update booking by doctor error: ' . $e->getMessage());
-            \Log::error('Stack trace: ' . $e->getTraceAsString());
             return response()->json([
                 'message' => 'Error updating booking',
                 'error' => $e->getMessage()

@@ -11,6 +11,7 @@ use App\Models\Doctor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use App\Models\Notification;
 
 class MessageController extends Controller
 {
@@ -121,78 +122,88 @@ class MessageController extends Controller
     }
 
     /**
-     * Send a new message
-     */
-    public function send(Request $request)
-    {
-        try {
-            $request->validate([
-                'receiver_id' => 'required|exists:users,id',
-                'content' => 'required|string|max:1000',
-                'conversation_id' => 'nullable|exists:conversations,id',
-            ]);
+ * Send a new message
+ */
+public function send(Request $request)
+{
+    try {
+        $request->validate([
+            'receiver_id' => 'required|exists:users,id',
+            'content' => 'required|string|max:1000',
+            'conversation_id' => 'nullable|exists:conversations,id',
+        ]);
 
-            $user = $request->user();
-            
-            // Find or create conversation
-            $conversation = null;
-            
-            if ($request->conversation_id) {
-                $conversation = Conversation::find($request->conversation_id);
-            }
-            
-            if (!$conversation) {
-                $conversation = Conversation::where(function($query) use ($user, $request) {
-                    $query->where('user1_id', $user->id)
-                        ->where('user2_id', $request->receiver_id);
-                })->orWhere(function($query) use ($user, $request) {
-                    $query->where('user1_id', $request->receiver_id)
-                        ->where('user2_id', $user->id);
-                })->first();
-
-                if (!$conversation) {
-                    $conversation = Conversation::create([
-                        'user1_id' => $user->id,
-                        'user2_id' => $request->receiver_id,
-                    ]);
-                }
-            }
-
-            $message = Message::create([
-                'conversation_id' => $conversation->id,
-                'sender_id' => $user->id,
-                'receiver_id' => $request->receiver_id,
-                'content' => $request->content,
-                'is_read' => false,
-            ]);
-
-            // Load sender and receiver relationships
-            $message->load(['sender', 'receiver']);
-
-            // Add avatar to response
-            $messageData = $message->toArray();
-            $messageData['sender_avatar'] = $this->getUserAvatarUrl($message->sender);
-            $messageData['receiver_avatar'] = $this->getUserAvatarUrl($message->receiver);
-
-            return response()->json([
-                'message' => 'Message sent successfully',
-                'data' => $messageData
-            ], 201);
-
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json([
-                'message' => 'Validation failed',
-                'errors' => $e->errors()
-            ], 422);
-        } catch (\Exception $e) {
-            \Log::error('Send message error: ' . $e->getMessage());
-            return response()->json([
-                'message' => 'Error sending message',
-                'error' => $e->getMessage()
-            ], 500);
+        $user = $request->user();
+        
+        // Find or create conversation
+        $conversation = null;
+        
+        if ($request->conversation_id) {
+            $conversation = Conversation::find($request->conversation_id);
         }
-    }
+        
+        if (!$conversation) {
+            $conversation = Conversation::where(function($query) use ($user, $request) {
+                $query->where('user1_id', $user->id)
+                    ->where('user2_id', $request->receiver_id);
+            })->orWhere(function($query) use ($user, $request) {
+                $query->where('user1_id', $request->receiver_id)
+                    ->where('user2_id', $user->id);
+            })->first();
 
+            if (!$conversation) {
+                $conversation = Conversation::create([
+                    'user1_id' => $user->id,
+                    'user2_id' => $request->receiver_id,
+                ]);
+            }
+        }
+
+        $message = Message::create([
+            'conversation_id' => $conversation->id,
+            'sender_id' => $user->id,
+            'receiver_id' => $request->receiver_id,
+            'content' => $request->content,
+            'is_read' => false,
+        ]);
+
+        // ✅ PHASE 8: "New Message" notification for patients only
+        $receiverPatient = Patient::where('user_id', $request->receiver_id)->first();
+        
+        if ($receiverPatient) {
+            Notification::create([
+                'patient_id' => $receiverPatient->id,
+                'type' => 'new_message',
+                'message' => "You have a new message from {$user->name}.",
+            ]);
+        }
+
+        // Load sender and receiver relationships
+        $message->load(['sender', 'receiver']);
+
+        // Add avatar to response
+        $messageData = $message->toArray();
+        $messageData['sender_avatar'] = $this->getUserAvatarUrl($message->sender);
+        $messageData['receiver_avatar'] = $this->getUserAvatarUrl($message->receiver);
+
+        return response()->json([
+            'message' => 'Message sent successfully',
+            'data' => $messageData
+        ], 201);
+
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        return response()->json([
+            'message' => 'Validation failed',
+            'errors' => $e->errors()
+        ], 422);
+    } catch (\Exception $e) {
+        \Log::error('Send message error: ' . $e->getMessage());
+        return response()->json([
+            'message' => 'Error sending message',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
     /**
      * Mark all messages in a conversation as read
      */

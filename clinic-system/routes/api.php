@@ -1,15 +1,31 @@
 <?php
+// routes/api.php
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Api\ServiceController;
 use App\Http\Controllers\Api\AppointmentController;
 use App\Http\Controllers\Api\DashboardController;
+// IMPORTANT: Change these imports to use the Admin namespace
 use App\Http\Controllers\Api\Admin\DoctorController as AdminDoctorController;
 use App\Http\Controllers\Api\Admin\PatientController as AdminPatientController;
+use App\Http\Controllers\Api\Admin\ReceptionistController as AdminReceptionistController;
 use App\Http\Controllers\Api\PatientController;
 use App\Http\Controllers\Api\DoctorController;
-use App\Http\Controllers\Api\MessageController; // Add this import
+use App\Http\Controllers\Api\ReceptionistController;
+use App\Http\Controllers\Api\MessageController;
+use App\Http\Controllers\Api\Receptionist\PatientController as ReceptionistPatientController;
+use App\Http\Controllers\Api\Receptionist\AppointmentController as ReceptionistAppointmentController;
+use App\Http\Controllers\Api\Receptionist\InvoiceController as ReceptionistInvoiceController;
+use App\Http\Controllers\Api\Admin\BillingController as AdminBillingController;
+use App\Http\Controllers\Api\Admin\ReportController as AdminReportController;
+use App\Http\Controllers\Api\Admin\FhirController as AdminFhirController;
+use App\Http\Controllers\Api\Admin\SpecializationController as AdminSpecializationController;
+use App\Http\Controllers\Api\QueueController as DoctorQueueController;
+use App\Http\Controllers\Api\EmrController as DoctorEmrController;
+use App\Http\Controllers\Api\PrescriptionController as DoctorPrescriptionController;
+use App\Http\Controllers\Api\PatientEmrController as PatientEmrController;
+use App\Http\Controllers\Api\DoctorInvoiceController;
 
 /*
 |--------------------------------------------------------------------------
@@ -19,11 +35,12 @@ use App\Http\Controllers\Api\MessageController; // Add this import
 
 // ========== PUBLIC ROUTES ==========
 Route::post('/login', [AuthenticatedSessionController::class, 'store']);
-Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
-    ->middleware('auth:sanctum');
 
 // ========== PROTECTED ROUTES ==========
 Route::middleware('auth:sanctum')->group(function () {
+    
+    // LOGOUT - Now properly inside the auth middleware group
+    Route::post('/logout', [AuthenticatedSessionController::class, 'destroy']);
     
     // Get authenticated user
     Route::get('/user', [AuthenticatedSessionController::class, 'user']);
@@ -31,7 +48,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Dashboard stats
     Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
 
-    // ===== MESSAGE ROUTES =====
+    // ===== MESSAGE ROUTES (accessible to both doctor and patient) =====
     Route::prefix('messages')->group(function () {
         Route::get('/conversations', [MessageController::class, 'conversations']);
         Route::get('/{conversation}', [MessageController::class, 'messages']);
@@ -60,6 +77,8 @@ Route::middleware('auth:sanctum')->group(function () {
         
         // Patients
         Route::get('/patients', [DoctorController::class, 'getPatients']);
+        Route::get('/patients/stats', [DoctorController::class, 'getPatientStats']);
+        Route::get('/patients/{patient}', [DoctorController::class, 'getPatientDetails']);
         
         // Notification Preferences
         Route::get('/notifications', [DoctorController::class, 'getNotificationPreferences']);
@@ -77,14 +96,34 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('/bookings/{booking}/accept', [AppointmentController::class, 'accept']);
         Route::patch('/bookings/{booking}/cancel', [AppointmentController::class, 'cancel']);
         Route::patch('/bookings/{booking}/status', [AppointmentController::class, 'updateStatus']);
+
+        // Invoices — Phase 6
+        // NOTE: old getInvoices() route disabled in favor of DoctorInvoiceController
+        // below. Uncomment this and remove the two new routes if getInvoices()
+        // turns out to be the one other screens actually depend on.
+        // Route::get('/invoices', [DoctorController::class, 'getInvoices']);
+
+        // Invoices & Payment Stats — new
+        Route::get('/invoices', [DoctorInvoiceController::class, 'index']);
+        Route::get('/payment-stats', [DoctorInvoiceController::class, 'stats']);
+
+        // ===== Phase 8: Doctor Features =====
+        
+        // Queue Management
+        Route::get('/queue', [DoctorQueueController::class, 'index']);
+        Route::patch('/queue/{booking}/call', [DoctorQueueController::class, 'call']);
+        Route::patch('/queue/{booking}/complete', [DoctorQueueController::class, 'complete']);
+
+        // EMR — Doctor writes to patient records
+        Route::get('/patients/{patient}/emr', [DoctorEmrController::class, 'show']);
+        Route::post('/patients/{patient}/diagnoses', [DoctorEmrController::class, 'storeDiagnosis']);
+        Route::post('/patients/{patient}/lab-results', [DoctorEmrController::class, 'storeLabResult']);
+        Route::post('/patients/{patient}/radiology-results', [DoctorEmrController::class, 'storeRadiologyResult']);
+
+        // Prescriptions — Doctor creates prescriptions
+        Route::get('/prescriptions', [DoctorPrescriptionController::class, 'index']);
+        Route::post('/patients/{patient}/prescriptions', [DoctorPrescriptionController::class, 'store']);
     });
-    // ===== MESSAGE ROUTES (Accessible to both doctor and patient) =====
-Route::prefix('messages')->group(function () {
-    Route::get('/conversations', [MessageController::class, 'conversations']);
-    Route::get('/{conversation}', [MessageController::class, 'messages']);
-    Route::post('/send', [MessageController::class, 'send']);
-    Route::post('/{conversation}/read', [MessageController::class, 'markAsRead']);
-});
 
     // ===== PATIENT ROUTES =====
     Route::prefix('patient')->middleware('role:patient')->group(function () {
@@ -93,10 +132,12 @@ Route::prefix('messages')->group(function () {
         Route::put('/profile', [PatientController::class, 'updateProfile']);
         Route::put('/password', [PatientController::class, 'updatePassword']);
         Route::get('/dashboard/stats', [PatientController::class, 'dashboardStats']);
-    Route::get('/health-metrics', [PatientController::class, 'healthMetrics']);
-    Route::get('/recent-activity', [PatientController::class, 'recentActivity']);
-    Route::get('/appointments/upcoming', [AppointmentController::class, 'upcoming']);
-    Route::get('/appointments/past', [AppointmentController::class, 'past']);
+
+        // ===== Phase 8: Patient EMR & Prescriptions (Read-only) =====
+        Route::get('/emr', [PatientController::class, 'emr']);
+        Route::get('/prescriptions', [PatientController::class, 'prescriptions']);
+        Route::get('/prescriptions/{prescription}', [PatientController::class, 'prescriptionDetail']);
+
         // Health Metrics
         Route::get('/health-metrics', [PatientController::class, 'healthMetrics']);
         
@@ -105,6 +146,8 @@ Route::prefix('messages')->group(function () {
         
         // Notifications
         Route::get('/notifications', [PatientController::class, 'notifications']);
+        Route::post('/notifications/{id}/read', [PatientController::class, 'markNotificationRead']);
+        Route::post('/notifications/read-all', [PatientController::class, 'markAllNotificationsRead']);
         
         // Visits
         Route::get('/visits', [PatientController::class, 'visits']);
@@ -142,10 +185,59 @@ Route::prefix('messages')->group(function () {
         // Appointments lists
         Route::get('/appointments/upcoming', [AppointmentController::class, 'upcoming']);
         Route::get('/appointments/past', [AppointmentController::class, 'past']);
+
+        // Invoices — Phase 6
+        Route::get('/invoices', [PatientController::class, 'invoices']);
+        Route::get('/invoices/{invoice}', [PatientController::class, 'invoiceDetail']);
+    });
+
+    // ===== RECEPTIONIST ROUTES (Phase 5 & 8) =====
+    Route::prefix('receptionist')->middleware('role:receptionist')->group(function () {
+        // Profile
+        Route::get('/profile', [ReceptionistController::class, 'profile']);
+        Route::put('/profile', [ReceptionistController::class, 'updateProfile']);
+        Route::put('/password', [ReceptionistController::class, 'updatePassword']);
+
+        // Dashboard
+        Route::get('/dashboard/stats', [ReceptionistController::class, 'dashboardStats']);
+
+        // Patients — approval workflow, walk-ins, search, edit.
+        Route::get('/patients', [ReceptionistPatientController::class, 'index']);
+        Route::get('/patients/pending', [ReceptionistPatientController::class, 'pending']);
+        Route::get('/patients/search', [ReceptionistPatientController::class, 'search']);
+        Route::get('/patients/{patient}', [ReceptionistPatientController::class, 'show']);
+        Route::put('/patients/{patient}', [ReceptionistPatientController::class, 'update']);
+        Route::patch('/patients/{patient}/approve', [ReceptionistPatientController::class, 'approve']);
+        Route::patch('/patients/{patient}/reject', [ReceptionistPatientController::class, 'reject']);
+        Route::post('/patients/walk-in', [ReceptionistPatientController::class, 'registerWalkIn']);
+
+        // Appointments — create, reschedule, cancel, check-in.
+        Route::post('/appointments', [ReceptionistAppointmentController::class, 'store']);
+        Route::put('/appointments/{booking}/reschedule', [ReceptionistAppointmentController::class, 'reschedule']);
+        Route::patch('/appointments/{booking}/cancel', [ReceptionistAppointmentController::class, 'cancel']);
+        Route::patch('/appointments/{booking}/check-in', [ReceptionistAppointmentController::class, 'checkIn']);
+        Route::patch('/appointments/{booking}/send-to-room', [ReceptionistAppointmentController::class, 'sendToRoom']); // Phase 8
+        Route::get('/appointments/today', [ReceptionistAppointmentController::class, 'todaySchedule']);
+
+        // Doctors — read-only availability/schedule.
+        Route::get('/doctors/availability', [ReceptionistAppointmentController::class, 'doctorAvailability']);
+        Route::get('/doctors/{doctor}/schedule', [ReceptionistAppointmentController::class, 'doctorSchedule']);
+        Route::get('/doctors/{doctor}/services', [ReceptionistAppointmentController::class, 'doctorServices']);
+
+        // Invoices — Phase 6
+        Route::get('/invoices', [ReceptionistInvoiceController::class, 'index']);
+        Route::post('/invoices', [ReceptionistInvoiceController::class, 'store']);
+        Route::get('/invoices/{invoice}', [ReceptionistInvoiceController::class, 'show']);
+        Route::get('/invoices/{invoice}/receipt', [ReceptionistInvoiceController::class, 'receipt']);
+        Route::patch('/invoices/{invoice}/mark-paid', [ReceptionistInvoiceController::class, 'markPaid']);
+        Route::patch('/invoices/{invoice}/mark-pending', [ReceptionistInvoiceController::class, 'markPending']);
     });
 
     // ===== ADMIN ROUTES =====
     Route::prefix('admin')->middleware('role:admin')->group(function () {
+        // Specializations (for doctor create/edit form)
+        Route::get('/specializations', [AdminSpecializationController::class, 'index']);
+        
         // Doctors management
         Route::get('/doctors', [AdminDoctorController::class, 'index']);
         Route::post('/doctors', [AdminDoctorController::class, 'store']);
@@ -159,11 +251,30 @@ Route::prefix('messages')->group(function () {
         Route::get('/patients/{patient}', [AdminPatientController::class, 'show']);
         Route::put('/patients/{patient}', [AdminPatientController::class, 'update']);
         Route::delete('/patients/{patient}', [AdminPatientController::class, 'destroy']);
+
+        // Receptionists management
+        Route::get('/receptionists', [AdminReceptionistController::class, 'index']);
+        Route::post('/receptionists', [AdminReceptionistController::class, 'store']);
+        Route::get('/receptionists/{receptionist}', [AdminReceptionistController::class, 'show']);
+        Route::put('/receptionists/{receptionist}', [AdminReceptionistController::class, 'update']);
+        Route::delete('/receptionists/{receptionist}', [AdminReceptionistController::class, 'destroy']);
         
         // Appointments
-        Route::get('/appointments', [AppointmentController::class, 'adminAppointments']);
-        Route::get('/appointments/{booking}', [AppointmentController::class, 'show']);
-        Route::patch('/appointments/{booking}/status', [AppointmentController::class, 'updateStatus']);
-        Route::patch('/appointments/{booking}/cancel', [AppointmentController::class, 'cancel']);
+        Route::get('/appointments', [\App\Http\Controllers\Api\AppointmentController::class, 'adminAppointments']);
+        Route::get('/appointments/{booking}', [\App\Http\Controllers\Api\AppointmentController::class, 'show']);
+        Route::patch('/appointments/{booking}/status', [\App\Http\Controllers\Api\AppointmentController::class, 'updateStatus']);
+        Route::patch('/appointments/{booking}/cancel', [\App\Http\Controllers\Api\AppointmentController::class, 'cancel']);
+
+        // Billing — Phase 6
+        Route::get('/billing/summary', [AdminBillingController::class, 'summary']);
+        Route::get('/billing/invoices', [AdminBillingController::class, 'invoices']);
+
+        // Reports — Phase 7
+        Route::get('/reports/overview', [AdminReportController::class, 'index']);
+
+        // HL7 FHIR export — Phase 8
+        Route::get('/fhir/patients/{patient}', [AdminFhirController::class, 'patient']);
+        Route::get('/fhir/doctors/{doctor}', [AdminFhirController::class, 'doctor']);
+        Route::get('/fhir/appointments/{booking}', [AdminFhirController::class, 'appointment']);
     });
 });

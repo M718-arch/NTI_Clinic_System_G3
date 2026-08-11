@@ -8,14 +8,26 @@ use App\Models\Booking;
 use App\Models\Doctor;
 use App\Models\Service;
 use App\Models\Notification;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
+use App\Models\Invoice;
+use App\Models\Diagnosis;
+use App\Models\LabResult;
+use App\Models\RadiologyResult;
+use App\Models\Prescription;
+
 
 class PatientController extends Controller
 {
+    // ============================================================
+    // PATIENT SIDE - Profile & Dashboard
+    // ============================================================
+
     /**
      * Get patient profile data
      */
@@ -26,7 +38,6 @@ class PatientController extends Controller
 
         $photoUrl = null;
         if ($patient && $patient->photo && Storage::disk('public')->exists($patient->photo)) {
-            // Use asset() to generate the correct URL with port
             $photoUrl = asset('storage/' . $patient->photo);
         }
 
@@ -53,6 +64,247 @@ class PatientController extends Controller
             'created_at' => $user->created_at,
         ]);
     }
+    /**
+ * List the authenticated patient's invoices — doubles as their payment
+ * history view (each row already carries status + date).
+ */
+public function invoices(Request $request)
+{
+    try {
+        $patient = Patient::where('user_id', Auth::id())->first();
+
+        if (!$patient) {
+            return response()->json([]);
+        }
+
+        $invoices = Invoice::where('patient_id', $patient->id)
+            ->with(['doctor.user'])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($invoice) {
+                return [
+                    'id' => $invoice->id,
+                    'invoice_number' => $invoice->invoice_number,
+                    'doctor_name' => $invoice->doctor->full_name ?? ($invoice->doctor->user->name ?? null),
+                    'service_name' => $invoice->service_name,
+                    'amount' => $invoice->formatted_amount,
+                    'status' => $invoice->status,
+                    'date' => $invoice->created_at->format('M j, Y'),
+                    'paid_at' => $invoice->paid_at?->format('M j, Y'),
+                ];
+            });
+
+        return response()->json($invoices);
+
+    } catch (\Exception $e) {
+        \Log::error('Patient invoices fetch error: ' . $e->getMessage());
+        return response()->json([
+            'message' => 'Error fetching invoices',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
+/**
+ * Get the patient's complete EMR (Electronic Medical Record)
+ * Includes: diagnoses, lab results, radiology results, and prescriptions
+ */
+public function emr(Request $request)
+{
+    try {
+        $patient = Patient::where('user_id', Auth::id())->first();
+
+        if (!$patient) {
+            return response()->json(['message' => 'Patient not found'], 404);
+        }
+
+        // Get all EMR data for this patient
+        $diagnoses = Diagnosis::where('patient_id', $patient->id)
+            ->with(['doctor.user'])
+            ->orderBy('diagnosed_at', 'desc')
+            ->get();
+
+        $labResults = LabResult::where('patient_id', $patient->id)
+            ->with(['doctor.user'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $radiologyResults = RadiologyResult::where('patient_id', $patient->id)
+            ->with(['doctor.user'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $prescriptions = Prescription::where('patient_id', $patient->id)
+            ->with(['doctor.user'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'diagnoses' => $diagnoses->map(function ($d) {
+                return [
+                    'id' => $d->id,
+                    'condition' => $d->condition,
+                    'icd_code' => $d->icd_code,
+                    'diagnosed_at' => $d->diagnosed_at?->format('Y-m-d'),
+                    'notes' => $d->notes,
+                    'doctor_name' => $d->doctor->user->name ?? 'N/A',
+                ];
+            }),
+            'lab_results' => $labResults->map(function ($lab) {
+                return [
+                    'id' => $lab->id,
+                    'test_name' => $lab->test_name,
+                    'result' => $lab->result,
+                    'reference_range' => $lab->reference_range,
+                    'interpretation' => $lab->interpretation,
+                    'performed_at' => $lab->performed_at?->format('Y-m-d'),
+                    'file_path' => $lab->file_path,
+                    'doctor_name' => $lab->doctor->user->name ?? 'N/A',
+                ];
+            }),
+            'radiology_results' => $radiologyResults->map(function ($rad) {
+                return [
+                    'id' => $rad->id,
+                    'study_type' => $rad->study_type,
+                    'findings' => $rad->findings,
+                    'impression' => $rad->impression,
+                    'performed_at' => $rad->performed_at?->format('Y-m-d'),
+                    'file_path' => $rad->file_path,
+                    'doctor_name' => $rad->doctor->user->name ?? 'N/A',
+                ];
+            }),
+            'prescriptions' => $prescriptions->map(function ($p) {
+                return [
+                    'id' => $p->id,
+                    'medicine' => $p->medicine,
+                    'dose' => $p->dose,
+                    'frequency' => $p->frequency,
+                    'duration' => $p->duration,
+                    'notes' => $p->notes,
+                    'prescribed_at' => $p->created_at->format('Y-m-d'),
+                    'doctor_name' => $p->doctor->user->name ?? 'N/A',
+                ];
+            }),
+        ]);
+
+    } catch (\Exception $e) {
+        \Log::error('EMR fetch error: ' . $e->getMessage());
+        return response()->json([
+            'message' => 'Error fetching EMR data',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
+
+/**
+ * Get the patient's prescriptions (payment history-like view)
+ */
+public function prescriptions(Request $request)
+{
+    try {
+        $patient = Patient::where('user_id', Auth::id())->first();
+
+        if (!$patient) {
+            return response()->json([]);
+        }
+
+        $prescriptions = Prescription::where('patient_id', $patient->id)
+            ->with(['doctor.user'])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($prescription) {
+                return [
+                    'id' => $prescription->id,
+                    'medicine' => $prescription->medicine,
+                    'dose' => $prescription->dose,
+                    'frequency' => $prescription->frequency,
+                    'duration' => $prescription->duration,
+                    'notes' => $prescription->notes,
+                    'prescribed_at' => $prescription->created_at->format('M j, Y'),
+                    'doctor_name' => $prescription->doctor->user->name ?? 'N/A',
+                ];
+            });
+
+        return response()->json($prescriptions);
+
+    } catch (\Exception $e) {
+        \Log::error('Prescriptions fetch error: ' . $e->getMessage());
+        return response()->json([
+            'message' => 'Error fetching prescriptions',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
+
+/**
+ * Get a single prescription detail
+ */
+public function prescriptionDetail(Request $request, Prescription $prescription)
+{
+    try {
+        $patient = Patient::where('user_id', Auth::id())->first();
+
+        if (!$patient || $prescription->patient_id !== $patient->id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $prescription->load(['doctor.user']);
+
+        return response()->json([
+            'id' => $prescription->id,
+            'medicine' => $prescription->medicine,
+            'dose' => $prescription->dose,
+            'frequency' => $prescription->frequency,
+            'duration' => $prescription->duration,
+            'notes' => $prescription->notes,
+            'prescribed_at' => $prescription->created_at->format('F j, Y'),
+            'doctor_name' => $prescription->doctor->user->name ?? 'N/A',
+            'doctor_id' => $prescription->doctor_id,
+            'patient_name' => $prescription->patient->user->name ?? 'N/A',
+        ]);
+
+    } catch (\Exception $e) {
+        \Log::error('Prescription detail error: ' . $e->getMessage());
+        return response()->json([
+            'message' => 'Error fetching prescription',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
+
+/**
+ * A single invoice's detail — the data a "View Invoice" /
+ * "Download Invoice" screen renders (and the browser can print to PDF).
+ */
+public function invoiceDetail(Request $request, Invoice $invoice)
+{
+    try {
+        $patient = Patient::where('user_id', Auth::id())->first();
+
+        if (!$patient || $invoice->patient_id !== $patient->id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $invoice->load(['doctor.user', 'booking']);
+
+        return response()->json([
+            'invoice_number' => $invoice->invoice_number,
+            'date' => $invoice->created_at->format('M j, Y'),
+            'doctor_name' => $invoice->doctor->full_name ?? ($invoice->doctor->user->name ?? null),
+            'service_name' => $invoice->service_name,
+            'amount' => $invoice->formatted_amount,
+            'status' => $invoice->status,
+            'paid_at' => $invoice->paid_at?->format('M j, Y g:i A'),
+            'payment_method' => $invoice->payment_method,
+        ]);
+
+    } catch (\Exception $e) {
+        \Log::error('Patient invoice detail error: ' . $e->getMessage());
+        return response()->json([
+            'message' => 'Error fetching invoice',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
 
     /**
      * Get dashboard statistics for patient
@@ -185,21 +437,14 @@ class PatientController extends Controller
                 return response()->json(['message' => 'Patient profile not found'], 404);
             }
 
-            // Delete old photo if exists
             if ($patient->photo) {
                 Storage::disk('public')->delete($patient->photo);
             }
 
-            // Store new photo
             $path = $request->file('photo')->store('patient-photos', 'public');
-
-            // Update the patient record
             $patient->update(['photo' => $path]);
-
-            // Refresh the model
             $patient->refresh();
 
-            // Use asset() to generate the correct URL with port
             $photoUrl = asset('storage/' . $path);
 
             return response()->json([
@@ -254,17 +499,11 @@ class PatientController extends Controller
     public function getDoctors(Request $request)
     {
         try {
-            \Log::info('getDoctors called');
-
             $doctors = Doctor::with(['user', 'specialization'])
                 ->where('status', true)
                 ->get();
 
-            \Log::info('Doctors found: ' . $doctors->count());
-
             $formattedDoctors = $doctors->map(function($doctor) {
-                // Build a full, usable image URL (or a UI Avatars fallback)
-                // instead of returning the raw storage path.
                 $name = $doctor->user->name ?? trim($doctor->first_name . ' ' . $doctor->last_name);
 
                 if ($doctor->image) {
@@ -302,7 +541,6 @@ class PatientController extends Controller
 
         } catch (\Exception $e) {
             \Log::error('Get doctors error: ' . $e->getMessage());
-            \Log::error('Stack trace: ' . $e->getTraceAsString());
             return response()->json([
                 'message' => 'Error fetching doctors',
                 'error' => $e->getMessage()
@@ -319,9 +557,7 @@ class PatientController extends Controller
             $doctor = Doctor::with(['user', 'specialization'])->find($doctorId);
 
             if (!$doctor) {
-                return response()->json([
-                    'message' => 'Doctor not found'
-                ], 404);
+                return response()->json(['message' => 'Doctor not found'], 404);
             }
 
             $services = Service::where('doctor_id', $doctorId)
@@ -407,8 +643,7 @@ class PatientController extends Controller
     }
 
     /**
-     * Get patient notifications (real data — appointment reschedules,
-     * etc — ordered newest first).
+     * Get patient notifications
      */
     public function notifications(Request $request)
     {
@@ -672,5 +907,226 @@ class PatientController extends Controller
         ];
 
         return $actions[$booking->status] ?? 'Updated appointment';
+    }
+
+    // ============================================================
+    // RECEPTIONIST SIDE - Patient Management
+    // ============================================================
+
+    /**
+     * List patients with optional approval status filter
+     */
+    public function index(Request $request)
+    {
+        $query = Patient::with('user')->orderBy('created_at', 'desc');
+
+        if ($request->filled('approval_status')) {
+            $query->where('approval_status', $request->approval_status);
+        }
+
+        return response()->json($query->get());
+    }
+
+    /**
+     * Patients awaiting review — the receptionist dashboard's
+     * "Pending Patient Registrations" queue.
+     */
+    public function pending()
+    {
+        return response()->json(
+            Patient::with('user')->pending()->orderBy('created_at', 'asc')->get()
+        );
+    }
+
+    /**
+     * Search patients by name, email, or phone.
+     */
+    public function search(Request $request)
+    {
+        $request->validate(['q' => 'required|string|min:1']);
+        $term = $request->q;
+
+        $patients = Patient::with('user')
+            ->whereHas('user', function ($q) use ($term) {
+                $q->where('name', 'like', "%{$term}%")
+                  ->orWhere('email', 'like', "%{$term}%");
+            })
+            ->orWhere('phone', 'like', "%{$term}%")
+            ->get();
+
+        return response()->json($patients);
+    }
+
+    /**
+     * Get a specific patient
+     */
+    public function show(Patient $patient)
+    {
+        return response()->json($patient->load('user'));
+    }
+
+    /**
+     * Approve a pending registration.
+     */
+    public function approve(Request $request, Patient $patient)
+    {
+        if ($patient->approval_status === 'approved') {
+            return response()->json(['message' => 'Patient is already approved'], 400);
+        }
+
+        $patient->update([
+            'approval_status' => 'approved',
+            'approved_by' => $request->user()->id,
+            'approved_at' => now(),
+            'rejection_reason' => null,
+        ]);
+
+        return response()->json([
+            'message' => 'Patient approved successfully',
+            'data' => $patient->fresh()->load('user')
+        ]);
+    }
+
+    /**
+     * Reject a pending registration.
+     */
+    public function reject(Request $request, Patient $patient)
+    {
+        $validated = $request->validate([
+            'reason' => 'nullable|string|max:500',
+        ]);
+
+        if ($patient->approval_status === 'rejected') {
+            return response()->json(['message' => 'Patient is already rejected'], 400);
+        }
+
+        $patient->update([
+            'approval_status' => 'rejected',
+            'approved_by' => $request->user()->id,
+            'approved_at' => now(),
+            'rejection_reason' => $validated['reason'] ?? null,
+        ]);
+
+        return response()->json([
+            'message' => 'Patient registration rejected',
+            'data' => $patient->fresh()->load('user')
+        ]);
+    }
+
+    /**
+     * Register a walk-in patient.
+     */
+    public function registerWalkIn(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users',
+            'password' => 'nullable|string|min:8',
+            'phone' => 'nullable|string|max:20',
+            'gender' => 'required|in:male,female',
+            'date_of_birth' => 'nullable|date',
+            'blood_group' => 'nullable|string|max:10',
+            'address' => 'nullable|string|max:500',
+            'emergency_contact_name' => 'nullable|string|max:255',
+            'emergency_contact_phone' => 'nullable|string|max:20',
+            'allergies' => 'nullable|string|max:500',
+            'chronic_diseases' => 'nullable|string|max:500',
+            'medical_history' => 'nullable|string|max:1000',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $password = $validated['password'] ?? bin2hex(random_bytes(8));
+
+            $user = User::create([
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'phone' => $validated['phone'] ?? null,
+                'password' => Hash::make($password),
+                'role' => 'patient',
+            ]);
+
+            $patient = Patient::create([
+                'user_id' => $user->id,
+                'phone' => $validated['phone'] ?? null,
+                'gender' => $validated['gender'],
+                'date_of_birth' => $validated['date_of_birth'] ?? null,
+                'blood_group' => $validated['blood_group'] ?? null,
+                'address' => $validated['address'] ?? null,
+                'emergency_contact_name' => $validated['emergency_contact_name'] ?? null,
+                'emergency_contact_phone' => $validated['emergency_contact_phone'] ?? null,
+                'allergies' => $validated['allergies'] ?? 'None',
+                'chronic_diseases' => $validated['chronic_diseases'] ?? 'None',
+                'medical_history' => $validated['medical_history'] ?? 'None',
+                'status' => true,
+                'approval_status' => 'approved',
+                'approved_by' => $request->user()->id,
+                'approved_at' => now(),
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Walk-in patient registered successfully',
+                'patient' => $patient->load('user'),
+                'generated_password' => isset($validated['password']) ? null : $password,
+            ], 201);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Failed to register walk-in patient',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Edit patient details.
+     */
+    public function updatePatient(Request $request, Patient $patient)
+    {
+        $validated = $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'email' => 'sometimes|email|unique:users,email,' . $patient->user_id,
+            'phone' => 'nullable|string|max:20',
+            'gender' => 'nullable|in:male,female',
+            'date_of_birth' => 'nullable|date',
+            'blood_group' => 'nullable|string|max:10',
+            'address' => 'nullable|string|max:500',
+            'emergency_contact_name' => 'nullable|string|max:255',
+            'emergency_contact_phone' => 'nullable|string|max:20',
+            'status' => 'boolean',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            if (isset($validated['name']) || isset($validated['email'])) {
+                $patient->user->update([
+                    'name' => $validated['name'] ?? $patient->user->name,
+                    'email' => $validated['email'] ?? $patient->user->email,
+                ]);
+            }
+
+            $patient->update(collect($validated)
+                ->except(['name', 'email'])
+                ->toArray());
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Patient updated successfully',
+                'patient' => $patient->fresh()->load('user')
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Failed to update patient',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }

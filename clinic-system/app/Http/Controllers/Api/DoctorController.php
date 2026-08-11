@@ -1,234 +1,260 @@
 <?php
+// app/Http/Controllers/Api/DoctorController.php
 
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Patient;
 use App\Models\Doctor;
+use App\Models\Booking;
+use App\Models\Invoice;
+use App\Models\Service;
+use App\Models\Availability;
+use App\Models\Notification;
 use App\Models\User;
 use Illuminate\Http\Request;
-use App\Models\Booking;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Schema;
-use Illuminate\Validation\ValidationException;
 
 class DoctorController extends Controller
 {
-  public function profile(Request $request)
-{
-    try {
-        $user = $request->user();
-        $doctor = $user->doctor()->with('specialization')->firstOrFail();
-        
-        // Debug - check if image exists
-        if ($doctor->image) {
-            $exists = Storage::disk('public')->exists($doctor->image);
-            \Log::info('Image check:', [
-                'path' => $doctor->image,
-                'exists' => $exists,
-                'url' => $doctor->image_url
-            ]);
-        }
-        
-        return response()->json($doctor);
-
-    } catch (\Exception $e) {
-        \Log::error('Profile fetch error: ' . $e->getMessage());
-        return response()->json([
-            'message' => 'Error fetching profile'
-        ], 500);
-    }
-}
     /**
-     * Update the doctor's profile
+     * Get doctor profile
      */
-    /**
- * Update the doctor's profile
- */
-public function updateProfile(Request $request)
-{
-    try {
-        $user = $request->user();
-        
-        if (!$user) {
-            return response()->json([
-                'message' => 'User not authenticated'
-            ], 401);
-        }
-
-        $doctor = $user->doctor;
-
-        if (!$doctor) {
-            return response()->json([
-                'message' => 'Doctor profile not found'
-            ], 404);
-        }
-
-        // Log the incoming request data for debugging
-        \Log::info('Doctor profile update request:', $request->all());
-
-        // Make all fields nullable to accept empty values
-        $validated = $request->validate([
-            'first_name' => 'nullable|string|max:255',
-            'last_name' => 'nullable|string|max:255',
-            'email' => 'nullable|email|unique:users,email,' . $user->id,
-            'phone' => 'nullable|string|max:20',
-            'gender' => 'nullable|string|in:male,female,other',
-            'date_of_birth' => 'nullable|date|before:today',
-            'experience_years' => 'nullable|integer|min:0|max:50',
-            'consultation_fee' => 'nullable|numeric|min:0',
-            'address' => 'nullable|string|max:500',
-            'bio' => 'nullable|string|max:1000',
-            'specialization_id' => 'nullable|exists:specializations,id',
-            'status' => 'nullable|boolean',
-            'clinic_name' => 'nullable|string|max:255',
-            'branch' => 'nullable|string|max:255',
-            'operating_hours' => 'nullable|string|max:100',
-        ]);
-
-        \Log::info('Validated data:', $validated);
-
-        // Filter out null or empty string values
-        $filteredData = array_filter($validated, function ($value) {
-            return $value !== null && $value !== '';
-        });
-
-        \Log::info('Filtered data:', $filteredData);
-
-        // Handle image upload if provided (separate from validation)
-        if ($request->hasFile('image')) {
-            if ($doctor->image && Storage::disk('public')->exists($doctor->image)) {
-                Storage::disk('public')->delete($doctor->image);
-            }
+    public function profile(Request $request)
+    {
+        try {
+            $doctor = $request->user()->doctor;
             
-            $path = $request->file('image')->store('doctor-images', 'public');
-            $filteredData['image'] = $path;
+            if (!$doctor) {
+                return response()->json(['message' => 'Doctor profile not found'], 404);
+            }
+
+            return response()->json($doctor);
+        } catch (\Exception $e) {
+            Log::error('Get profile error: ' . $e->getMessage());
+            return response()->json(['message' => 'Error fetching profile'], 500);
         }
-
-        // Update user email if provided
-        if (isset($filteredData['email'])) {
-            $user->update(['email' => $filteredData['email']]);
-            unset($filteredData['email']);
-        }
-
-        // Update user name if provided
-        if (isset($filteredData['first_name']) || isset($filteredData['last_name'])) {
-            $firstName = $filteredData['first_name'] ?? $doctor->first_name;
-            $lastName = $filteredData['last_name'] ?? $doctor->last_name;
-            $fullName = trim($firstName . ' ' . $lastName);
-            $user->update(['name' => $fullName]);
-        }
-
-        // Update doctor profile with filtered data
-        if (!empty($filteredData)) {
-            \Log::info('Updating doctor with data:', $filteredData);
-            $doctor->update($filteredData);
-        }
-
-        // Refresh the doctor model
-        $doctor->refresh();
-        $doctor->load('specialization');
-
-        return response()->json([
-            'message' => 'Profile updated successfully',
-            'data' => $doctor
-        ]);
-
-    } catch (ValidationException $e) {
-        \Log::error('Validation error: ' . json_encode($e->errors()));
-        return response()->json([
-            'message' => 'Validation failed',
-            'errors' => $e->errors()
-        ], 422);
-    } catch (\Exception $e) {
-        \Log::error('Profile update error: ' . $e->getMessage());
-        \Log::error('Stack trace: ' . $e->getTraceAsString());
-        
-        return response()->json([
-            'message' => 'Error updating profile',
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString() // This will help debug
-        ], 500);
     }
-}
 
     /**
-     * Update the doctor's password
+     * Update doctor profile
+     */
+    public function updateProfile(Request $request)
+    {
+        try {
+            $doctor = $request->user()->doctor;
+            
+            if (!$doctor) {
+                return response()->json(['message' => 'Doctor profile not found'], 404);
+            }
+
+            $validated = $request->validate([
+                'first_name' => 'nullable|string|max:255',
+                'last_name' => 'nullable|string|max:255',
+                'phone' => 'nullable|string|max:20',
+                'specialization' => 'nullable|string|max:255',
+                'bio' => 'nullable|string',
+                'clinic_name' => 'nullable|string|max:255',
+                'clinic_address' => 'nullable|string|max:500',
+                'clinic_phone' => 'nullable|string|max:20',
+            ]);
+
+            $doctor->update($validated);
+
+            return response()->json([
+                'message' => 'Profile updated successfully',
+                'data' => $doctor
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Update profile error: ' . $e->getMessage());
+            return response()->json(['message' => 'Error updating profile'], 500);
+        }
+    }
+
+    /**
+     * Update password
      */
     public function updatePassword(Request $request)
     {
         try {
-            $request->validate([
+            $validated = $request->validate([
                 'current_password' => 'required|string',
                 'new_password' => 'required|string|min:8|confirmed',
             ]);
 
             $user = $request->user();
 
-            if (!Hash::check($request->current_password, $user->password)) {
-                return response()->json([
-                    'message' => 'The current password is incorrect.'
-                ], 400);
+            if (!\Hash::check($validated['current_password'], $user->password)) {
+                return response()->json(['message' => 'Current password is incorrect'], 422);
             }
 
             $user->update([
-                'password' => Hash::make($request->new_password),
+                'password' => \Hash::make($validated['new_password'])
             ]);
 
-            return response()->json([
-                'message' => 'Password updated successfully'
-            ]);
-
+            return response()->json(['message' => 'Password updated successfully']);
         } catch (\Exception $e) {
-            \Log::error('Password update error: ' . $e->getMessage());
-            return response()->json([
-                'message' => 'Error updating password',
-                'error' => $e->getMessage()
-            ], 500);
+            Log::error('Update password error: ' . $e->getMessage());
+            return response()->json(['message' => 'Error updating password'], 500);
         }
     }
 
     /**
-     * Update the doctor's clinic information
+     * Update clinic settings
      */
     public function updateClinic(Request $request)
     {
         try {
             $doctor = $request->user()->doctor;
-
+            
             if (!$doctor) {
-                return response()->json([
-                    'message' => 'Doctor profile not found'
-                ], 404);
+                return response()->json(['message' => 'Doctor profile not found'], 404);
             }
 
             $validated = $request->validate([
                 'clinic_name' => 'nullable|string|max:255',
-                'branch' => 'nullable|string|max:255',
-                'operating_hours' => 'nullable|string|max:100',
-                'address' => 'nullable|string|max:500',
-                'consultation_fee' => 'nullable|numeric|min:0',
-                'status' => 'sometimes|boolean',
+                'clinic_address' => 'nullable|string|max:500',
+                'clinic_phone' => 'nullable|string|max:20',
             ]);
 
             $doctor->update($validated);
 
             return response()->json([
-                'message' => 'Clinic settings updated successfully',
+                'message' => 'Clinic updated successfully',
                 'data' => $doctor
             ]);
-
         } catch (\Exception $e) {
-            \Log::error('Clinic update error: ' . $e->getMessage());
-            return response()->json([
-                'message' => 'Error updating clinic settings',
-                'error' => $e->getMessage()
-            ], 500);
+            Log::error('Update clinic error: ' . $e->getMessage());
+            return response()->json(['message' => 'Error updating clinic'], 500);
         }
     }
 
     /**
-     * Get the doctor's statistics
+     * Upload doctor image
+     */
+    public function uploadImage(Request $request)
+    {
+        try {
+            $request->validate([
+                'image' => 'required|image|max:2048'
+            ]);
+
+            $doctor = $request->user()->doctor;
+            
+            if (!$doctor) {
+                return response()->json(['message' => 'Doctor profile not found'], 404);
+            }
+
+            // Delete old image if exists
+            if ($doctor->photo) {
+                Storage::disk('public')->delete($doctor->photo);
+            }
+
+            $path = $request->file('image')->store('doctor-images', 'public');
+            $doctor->update(['photo' => $path]);
+
+            return response()->json([
+                'message' => 'Image uploaded successfully',
+                'photo_url' => asset('storage/' . $path)
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Upload image error: ' . $e->getMessage());
+            return response()->json(['message' => 'Error uploading image'], 500);
+        }
+    }
+
+    /**
+     * Delete doctor image
+     */
+    public function deleteImage(Request $request)
+    {
+        try {
+            $doctor = $request->user()->doctor;
+            
+            if (!$doctor) {
+                return response()->json(['message' => 'Doctor profile not found'], 404);
+            }
+
+            if ($doctor->photo) {
+                Storage::disk('public')->delete($doctor->photo);
+                $doctor->update(['photo' => null]);
+            }
+
+            return response()->json(['message' => 'Image deleted successfully']);
+        } catch (\Exception $e) {
+            Log::error('Delete image error: ' . $e->getMessage());
+            return response()->json(['message' => 'Error deleting image'], 500);
+        }
+    }
+
+    /**
+     * Get doctor availability
+     */
+    public function getAvailability(Request $request)
+    {
+        try {
+            $doctor = $request->user()->doctor;
+            
+            if (!$doctor) {
+                return response()->json(['message' => 'Doctor profile not found'], 404);
+            }
+
+            $availability = Availability::where('doctor_id', $doctor->id)->get();
+
+            return response()->json($availability);
+        } catch (\Exception $e) {
+            Log::error('Get availability error: ' . $e->getMessage());
+            return response()->json(['message' => 'Error fetching availability'], 500);
+        }
+    }
+
+    /**
+     * Update doctor availability
+     */
+    public function updateAvailability(Request $request)
+    {
+        try {
+            $doctor = $request->user()->doctor;
+            
+            if (!$doctor) {
+                return response()->json(['message' => 'Doctor profile not found'], 404);
+            }
+
+            $validated = $request->validate([
+                'availability' => 'required|array',
+                'availability.*.day' => 'required|string|in:monday,tuesday,wednesday,thursday,friday,saturday,sunday',
+                'availability.*.start_time' => 'required|string',
+                'availability.*.end_time' => 'required|string',
+                'availability.*.is_available' => 'boolean',
+            ]);
+
+            // Delete existing availability
+            Availability::where('doctor_id', $doctor->id)->delete();
+
+            // Create new availability
+            foreach ($validated['availability'] as $slot) {
+                Availability::create([
+                    'doctor_id' => $doctor->id,
+                    'day' => $slot['day'],
+                    'start_time' => $slot['start_time'],
+                    'end_time' => $slot['end_time'],
+                    'is_available' => $slot['is_available'] ?? true,
+                ]);
+            }
+
+            return response()->json([
+                'message' => 'Availability updated successfully'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Update availability error: ' . $e->getMessage());
+            return response()->json(['message' => 'Error updating availability'], 500);
+        }
+    }
+
+    /**
+     * Get doctor statistics
      */
     public function getStats(Request $request)
     {
@@ -236,203 +262,171 @@ public function updateProfile(Request $request)
             $doctor = $request->user()->doctor;
             
             if (!$doctor) {
-                return response()->json([
-                    'message' => 'Doctor profile not found'
-                ], 404);
+                return response()->json(['message' => 'Doctor profile not found'], 404);
             }
 
-            $stats = [
-                'total_appointments' => $doctor->appointments()->count(),
-                'upcoming_appointments' => $doctor->appointments()
-                    ->where('appointment_date', '>=', now()->toDateString())
-                    ->where('status', 'confirmed')
-                    ->count(),
-                'pending_appointments' => $doctor->appointments()
-                    ->where('status', 'pending')
-                    ->count(),
-                'total_patients' => $doctor->appointments()
-                    ->distinct('patient_id')
-                    ->count('patient_id'),
-                'completed_appointments' => $doctor->appointments()
-                    ->where('status', 'completed')
-                    ->count(),
-                'experience_years' => $doctor->experience_years ?? 0,
-                'consultation_fee' => $doctor->consultation_fee ?? 0,
-            ];
+            $totalPatients = Patient::whereHas('bookings', function ($query) use ($doctor) {
+                $query->where('doctor_id', $doctor->id);
+            })->count();
 
-            return response()->json($stats);
+            $totalBookings = Booking::where('doctor_id', $doctor->id)->count();
+            $pendingBookings = Booking::where('doctor_id', $doctor->id)
+                ->where('status', 'pending')
+                ->count();
+            $completedBookings = Booking::where('doctor_id', $doctor->id)
+                ->where('status', 'completed')
+                ->count();
 
-        } catch (\Exception $e) {
-            \Log::error('Stats error: ' . $e->getMessage());
             return response()->json([
-                'message' => 'Error fetching statistics',
+                'total_patients' => $totalPatients,
+                'total_bookings' => $totalBookings,
+                'pending_bookings' => $pendingBookings,
+                'completed_bookings' => $completedBookings,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Get stats error: ' . $e->getMessage());
+            return response()->json(['message' => 'Error fetching stats'], 500);
+        }
+    }
+
+    /**
+     * Get patients list for doctor
+     */
+    public function getPatients(Request $request)
+    {
+        try {
+            $doctor = $request->user()->doctor;
+            
+            if (!$doctor) {
+                return response()->json(['message' => 'Doctor profile not found'], 404);
+            }
+
+            // Get patients who have appointments with this doctor
+            $patients = Patient::whereHas('bookings', function ($query) use ($doctor) {
+                $query->where('doctor_id', $doctor->id);
+            })
+            ->with(['user'])
+            ->get()
+            ->map(function ($patient) {
+                // Get visit counts
+                $visits = Booking::where('patient_id', $patient->id)
+                    ->where('status', 'completed')
+                    ->count();
+                
+                $lastVisit = Booking::where('patient_id', $patient->id)
+                    ->where('status', 'completed')
+                    ->latest('date')
+                    ->first();
+
+                return [
+                    'id' => $patient->id,
+                    'name' => $patient->user?->name,
+                    'email' => $patient->user?->email,
+                    'phone' => $patient->phone,
+                    'photo' => $patient->photo,
+                    'photo_url' => $patient->photo_url,
+                    'date_of_birth' => $patient->date_of_birth,
+                    'gender' => $patient->gender,
+                    'address' => $patient->address,
+                    'total_visits' => $visits,
+                    'last_visit' => $lastVisit?->date,
+                    'status' => $visits > 0 ? 'active' : 'new',
+                ];
+            });
+
+            return response()->json($patients);
+        } catch (\Exception $e) {
+            Log::error('Get patients error: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Error fetching patients',
                 'error' => $e->getMessage()
             ], 500);
         }
     }
 
-/**
- * Get the doctor's patients
- */
-public function getPatients(Request $request)
-{
-    try {
-        $doctor = $request->user()->doctor;
-        
-        if (!$doctor) {
-            return response()->json([
-                'message' => 'Doctor profile not found'
-            ], 404);
-        }
-
-        $patients = $doctor->appointments()
-            ->with('patient.user')
-            ->whereNotNull('patient_id')
-            ->get()
-            ->groupBy('patient_id')
-            ->map(function($appointments, $patientId) {
-                $patient = $appointments->first()->patient;
-                $user = $patient->user;
-                
-                // Get patient image URL or generate UI Avatar
-                $imageUrl = null;
-if ($patient->photo) {
-    $imageUrl = asset('storage/' . $patient->photo);
-} else {
-                    // Generate UI Avatar if no image exists
-                    $name = $user->name ?? 'Patient';
-                    $imageUrl = 'https://ui-avatars.com/api/?name=' . urlencode($name) . '&background=random&size=128&bold=true';
-                }
-                
-                return [
-                    'id' => $patient->id,
-                    'user_id' => $user->id ?? null,
-                    'name' => $user->name ?? 'Unknown',
-                    'email' => $user->email ?? '',
-                    'phone' => $patient->phone ?? '',
-                    'date_of_birth' => $patient->date_of_birth ?? null,
-                    'image_url' => $imageUrl,
-                    'avatar' => $imageUrl,
-                    'photo_url' => $imageUrl,
-                    'total_visits' => $appointments->count(),
-                    'last_visit' => $appointments->sortByDesc('appointment_date')->first()->appointment_date ?? null,
-                    'first_visit' => $appointments->sortBy('appointment_date')->first()->appointment_date ?? null,
-                ];
-            })
-            ->values();
-
-        return response()->json($patients);
-
-    } catch (\Exception $e) {
-        \Log::error('Patients fetch error: ' . $e->getMessage());
-        return response()->json([
-            'message' => 'Error fetching patients',
-            'error' => $e->getMessage()
-        ], 500);
-    }
-}
     /**
- * Upload doctor image
- */
-public function uploadImage(Request $request)
-{
-    try {
-        $doctor = $request->user()->doctor;
-
-        if (!$doctor) {
-            return response()->json([
-                'message' => 'Doctor profile not found'
-            ], 404);
-        }
-
-        $request->validate([
-            'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048'
-        ]);
-
-        if ($doctor->image && Storage::disk('public')->exists($doctor->image)) {
-            Storage::disk('public')->delete($doctor->image);
-        }
-
-        $path = $request->file('image')->store('doctor-images', 'public');
-        $doctor->update(['image' => $path]);
-
-        return response()->json([
-            'message' => 'Image uploaded successfully',
-            'image_url' => Storage::url($path)
-        ]);
-
-    } catch (\Exception $e) {
-        \Log::error('Image upload error: ' . $e->getMessage());
-        return response()->json([
-            'message' => 'Error uploading image',
-            'error' => $e->getMessage()
-        ], 500);
-    }
-}
-
-/**
- * Delete doctor image
- */
-public function deleteImage(Request $request)
-{
-    try {
-        $doctor = $request->user()->doctor;
-
-        if (!$doctor) {
-            return response()->json([
-                'message' => 'Doctor profile not found'
-            ], 404);
-        }
-
-        if ($doctor->image && Storage::disk('public')->exists($doctor->image)) {
-            Storage::disk('public')->delete($doctor->image);
-            $doctor->update(['image' => null]);
-        }
-
-        return response()->json([
-            'message' => 'Image deleted successfully'
-        ]);
-
-    } catch (\Exception $e) {
-        \Log::error('Image delete error: ' . $e->getMessage());
-        return response()->json([
-            'message' => 'Error deleting image',
-            'error' => $e->getMessage()
-        ], 500);
-    }
-}
-    /**
-     * Update notification preferences
+     * Get patient details for doctor view
      */
-    public function updateNotifications(Request $request)
+    public function getPatientDetails($patientId)
     {
         try {
-            $user = $request->user();
+            $patient = Patient::with(['user'])->findOrFail($patientId);
             
-            $validated = $request->validate([
-                'appointment_requests' => 'boolean',
-                'appointment_reminders' => 'boolean',
-                'patient_messages' => 'boolean',
-                'payment_updates' => 'boolean',
-                'clinic_announcements' => 'boolean',
-            ]);
+            $visits = Booking::where('patient_id', $patient->id)
+                ->where('status', 'completed')
+                ->count();
+            
+            $lastVisit = Booking::where('patient_id', $patient->id)
+                ->where('status', 'completed')
+                ->latest('date')
+                ->first();
 
-            // Check if column exists
-            if (Schema::hasColumn('users', 'notification_preferences')) {
-                $user->update([
-                    'notification_preferences' => $validated
-                ]);
+            return response()->json([
+                'id' => $patient->id,
+                'name' => $patient->user?->name,
+                'email' => $patient->user?->email,
+                'phone' => $patient->phone,
+                'photo' => $patient->photo,
+                'photo_url' => $patient->photo_url,
+                'date_of_birth' => $patient->date_of_birth,
+                'gender' => $patient->gender,
+                'address' => $patient->address,
+                'blood_group' => $patient->blood_group,
+                'allergies' => $patient->allergies,
+                'chronic_diseases' => $patient->chronic_diseases,
+                'emergency_contact' => $patient->emergency_contact,
+                'medical_history' => $patient->medical_history,
+                'diagnoses' => $patient->diagnoses,
+                'family_history' => $patient->family_history,
+                'past_surgeries' => $patient->past_surgeries,
+                'total_visits' => $visits,
+                'last_visit' => $lastVisit?->date,
+                'user' => $patient->user,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Get patient details error: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Patient not found'
+            ], 404);
+        }
+    }
+
+    /**
+     * Get patient statistics
+     */
+    public function getPatientStats(Request $request)
+    {
+        try {
+            $doctor = $request->user()->doctor;
+            
+            if (!$doctor) {
+                return response()->json(['message' => 'Doctor profile not found'], 404);
             }
 
-            return response()->json([
-                'message' => 'Notification preferences updated successfully',
-                'data' => $validated
-            ]);
+            $totalPatients = Patient::whereHas('bookings', function ($query) use ($doctor) {
+                $query->where('doctor_id', $doctor->id);
+            })->count();
 
-        } catch (\Exception $e) {
-            \Log::error('Notification update error: ' . $e->getMessage());
+            $newPatients = Patient::whereHas('bookings', function ($query) use ($doctor) {
+                $query->where('doctor_id', $doctor->id)
+                      ->where('created_at', '>=', now()->subDays(30));
+            })->count();
+
+            $activePatients = Patient::whereHas('bookings', function ($query) use ($doctor) {
+                $query->where('doctor_id', $doctor->id)
+                      ->where('status', 'completed')
+                      ->where('date', '>=', now()->subDays(90));
+            })->count();
+
             return response()->json([
-                'message' => 'Error updating notifications',
+                'total' => $totalPatients,
+                'newConsultations' => $newPatients,
+                'activeTreatments' => $activePatients,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Get patient stats error: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Error fetching patient stats',
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -444,88 +438,74 @@ public function deleteImage(Request $request)
     public function getNotificationPreferences(Request $request)
     {
         try {
-            $user = $request->user();
-            
-            $defaults = [
-                'appointment_requests' => true,
-                'appointment_reminders' => true,
-                'patient_messages' => true,
-                'payment_updates' => true,
-                'clinic_announcements' => true,
-            ];
-
-            $preferences = $user->notification_preferences ?? $defaults;
-
-            return response()->json($preferences);
-
-        } catch (\Exception $e) {
-            \Log::error('Notification fetch error: ' . $e->getMessage());
-            return response()->json([
-                'message' => 'Error fetching notifications',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Get doctor's availability status
-     */
-    public function getAvailability(Request $request)
-    {
-        try {
             $doctor = $request->user()->doctor;
             
             if (!$doctor) {
-                return response()->json([
-                    'message' => 'Doctor profile not found'
-                ], 404);
+                return response()->json(['message' => 'Doctor profile not found'], 404);
             }
 
             return response()->json([
-                'status' => $doctor->status ?? true,
-                'is_available' => (bool) ($doctor->status ?? true)
+                'email_notifications' => $doctor->email_notifications ?? true,
+                'sms_notifications' => $doctor->sms_notifications ?? false,
+                'app_notifications' => $doctor->app_notifications ?? true,
             ]);
-
         } catch (\Exception $e) {
-            \Log::error('Availability fetch error: ' . $e->getMessage());
-            return response()->json([
-                'message' => 'Error fetching availability',
-                'error' => $e->getMessage()
-            ], 500);
+            Log::error('Get notification preferences error: ' . $e->getMessage());
+            return response()->json(['message' => 'Error fetching preferences'], 500);
         }
     }
 
     /**
-     * Update doctor's availability
+     * Update notification preferences
      */
-    public function updateAvailability(Request $request)
+    public function updateNotifications(Request $request)
     {
         try {
             $doctor = $request->user()->doctor;
             
             if (!$doctor) {
-                return response()->json([
-                    'message' => 'Doctor profile not found'
-                ], 404);
+                return response()->json(['message' => 'Doctor profile not found'], 404);
             }
 
             $validated = $request->validate([
-                'status' => 'required|boolean'
+                'email_notifications' => 'boolean',
+                'sms_notifications' => 'boolean',
+                'app_notifications' => 'boolean',
             ]);
 
             $doctor->update($validated);
 
             return response()->json([
-                'message' => 'Availability updated successfully',
+                'message' => 'Notification preferences updated successfully',
                 'data' => $doctor
             ]);
-
         } catch (\Exception $e) {
-            \Log::error('Availability update error: ' . $e->getMessage());
-            return response()->json([
-                'message' => 'Error updating availability',
-                'error' => $e->getMessage()
-            ], 500);
+            Log::error('Update notifications error: ' . $e->getMessage());
+            return response()->json(['message' => 'Error updating preferences'], 500);
+        }
+    }
+
+    /**
+     * Get invoices for doctor
+     */
+    public function getInvoices(Request $request)
+    {
+        try {
+            $doctor = $request->user()->doctor;
+            
+            if (!$doctor) {
+                return response()->json(['message' => 'Doctor profile not found'], 404);
+            }
+
+            $invoices = Invoice::where('doctor_id', $doctor->id)
+                ->with(['patient.user'])
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            return response()->json($invoices);
+        } catch (\Exception $e) {
+            Log::error('Get invoices error: ' . $e->getMessage());
+            return response()->json(['message' => 'Error fetching invoices'], 500);
         }
     }
 }

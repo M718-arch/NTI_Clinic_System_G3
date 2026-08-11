@@ -34,12 +34,13 @@ class AuthenticatedSessionController extends Controller
         $request->session()->regenerate();
 
         // Redirect based on role
-        return match ($user->role) {
-            'admin' => redirect()->intended(route('admin.dashboard')),
-            'doctor' => redirect()->intended(route('doctor.dashboard')),
-            'patient' => redirect()->intended('/'),
-            default => redirect('/'),
-        };
+       return match ($user->role) {
+    'admin' => redirect()->intended(route('admin.dashboard')),
+    'doctor' => redirect()->intended(route('doctor.dashboard')),
+    'patient' => redirect()->intended(route('patient.dashboard')),
+    'receptionist' => redirect()->intended(route('receptionist.dashboard')),
+    default => redirect('/'),
+};
     }
 
     public function destroy(Request $request)

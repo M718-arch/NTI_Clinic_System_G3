@@ -1,18 +1,24 @@
+// resources/js/components/Doctor/data/index.js
+
 import { 
   LayoutGrid, CalendarDays, Users, MessageSquare, CreditCard, 
   Settings as SettingsIcon, UserPlus, DollarSign, UserCheck, Clock, 
-  Bell, Lock, Building2 
+  Bell, Lock, Building2, ClipboardList, FileText 
 } from 'lucide-react';
 
+// Only ONE NAV_ITEMS export - remove the duplicate
 export const NAV_ITEMS = [
   { key: "overview", label: "Overview", icon: LayoutGrid },
   { key: "calendar", label: "Calendar", icon: CalendarDays },
   { key: "patients", label: "Patient List", icon: Users },
+  { key: "chart", label: "Patient Chart", icon: FileText }, // ✅ Added
+  { key: "queue", label: "Queue", icon: Clock },
   { key: "messages", label: "Messages", icon: MessageSquare },
   { key: "payment", label: "Payment information", icon: CreditCard },
   { key: "settings", label: "Settings", icon: SettingsIcon },
 ];
 
+// The rest of your exports...
 export const STAT_CARDS = [
   { label: "Today's Appointments", value: "12", delta: "+3", up: true, icon: CalendarDays, tint: "#eef4ff", fg: "#3b7cf6" },
   { label: "Total Patients", value: "1,284", delta: "+18", up: true, icon: Users, tint: "#f0fbf6", fg: "#22b07d" },

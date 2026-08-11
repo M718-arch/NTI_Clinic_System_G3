@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>MediGlass - Patient Management</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Plus+Jakarta+Sans:wght@600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary-container": "#ffcfb9",
+                        "on-surface-variant": "#424752",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary-fixed": "#341100",
+                        "on-background": "#191c1e",
+                        "secondary-fixed-dim": "#bdc8d3",
+                        "outline": "#727783",
+                        "surface-variant": "#e0e3e5",
+                        "on-primary-container": "#c8daff",
+                        "secondary": "#55606a",
+                        "on-secondary-fixed": "#121d25",
+                        "surface-container-highest": "#e0e3e5",
+                        "secondary-container": "#d9e4f0",
+                        "on-tertiary": "#ffffff",
+                        "inverse-on-surface": "#eff1f3",
+                        "primary-container": "#005eb8",
+                        "surface-bright": "#f7f9fb",
+                        "on-primary-fixed-variant": "#00468c",
+                        "tertiary-fixed": "#ffdbcb",
+                        "on-error-container": "#93000a",
+                        "on-secondary-fixed-variant": "#3d4851",
+                        "inverse-surface": "#2d3133",
+                        "tertiary": "#793100",
+                        "secondary-fixed": "#d9e4f0",
+                        "primary-fixed-dim": "#a9c7ff",
+                        "outline-variant": "#c2c6d4",
+                        "primary-fixed": "#d6e3ff",
+                        "surface-container-low": "#f2f4f6",
+                        "on-error": "#ffffff",
+                        "primary": "#00478d",
+                        "inverse-primary": "#a9c7ff",
+                        "surface-dim": "#d8dadc",
+                        "on-secondary-container": "#5b6670",
+                        "background": "#f7f9fb",
+                        "surface-container-high": "#e6e8ea",
+                        "surface": "#f7f9fb",
+                        "on-primary-fixed": "#001b3d",
+                        "surface-tint": "#005db6",
+                        "on-tertiary-fixed-variant": "#793100",
+                        "tertiary-fixed-dim": "#ffb691",
+                        "on-surface": "#191c1e",
+                        "error": "#ba1a1a",
+                        "tertiary-container": "#9f4300",
+                        "surface-container": "#eceef0",
+                        "on-secondary": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "error-container": "#ffdad6"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xl": "64px",
+                        "md": "24px",
+                        "lg": "32px",
+                        "xs": "8px",
+                        "sm": "16px",
+                        "margin": "32px",
+                        "gutter": "24px",
+                        "base": "4px"
+                    },
+                    "fontFamily": {
+                        "body-md": ["Inter"],
+                        "headline-lg": ["Plus Jakarta Sans"],
+                        "title-md": ["Inter"],
+                        "headline-lg-mobile": ["Plus Jakarta Sans"],
+                        "label-sm": ["Inter"],
+                        "display-lg": ["Plus Jakarta Sans"]
+                    },
+                    "fontSize": {
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "fontWeight": "600" }],
+                        "title-md": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        }
+        .glass-highlight {
+            border-top: 1px solid rgba(255, 255, 255, 0.8);
+            border-left: 1px solid rgba(255, 255, 255, 0.8);
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body-md min-h-screen overflow-x-hidden">
+<!-- TopNavBar -->
+<nav class="bg-white/70 backdrop-blur-md text-primary font-body-md text-body-md fixed top-0 right-0 w-[calc(100%-16rem)] z-40 border-b border-black/5 shadow-sm transition-all duration-200 flex justify-between items-center h-16 px-lg hidden md:flex">
+<div class="flex items-center gap-sm">
+<span class="font-headline-lg text-headline-lg font-bold text-primary">MediGlass</span>
+</div>
+<div class="flex-1 flex justify-center max-w-md mx-auto">
+<div class="relative w-full">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/50">search</span>
+<input class="w-full bg-surface-container-low/50 border border-outline-variant/30 rounded-full py-2 pl-10 pr-4 text-on-surface focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors bg-white/50 backdrop-blur-sm" placeholder="Search patients, doctors..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-sm">
+<button class="p-2 text-on-surface-variant hover:bg-surface-variant/50 rounded-full transition-colors flex items-center justify-center">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<div class="w-10 h-10 rounded-full overflow-hidden border border-outline-variant/20 ml-2 shadow-sm">
+<img alt="Receptionist Profile" class="w-full h-full object-cover" data-alt="Close up professional headshot of a female medical receptionist in a bright, modern clinic setting, wearing subtle blue scrubs. High key lighting, clinical and professional mood, realistic photography style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD-ddLrVU5ZhpyEOB4A9rPc4DC0SKZZvDU9PodL3nQ8WDPhQ_6rMVG8s6K3TVdZkU4M1WlqSgWsF6hEc_S4kXq-va7k6Bkvaas86ySPAbejWWOKkn3Zm61cIL7vCC4VXW15azzY9l5ONL3Cwww_y1sCZhHTXZ3g7oQseKiW0696e-QIRXtMhD8kG0pmXHuzGCWolNynU5Lho5Nj0DMP6UMZw8mRs_mJsFiqLUmHQ10udFBYVZJQJUf2Vw"/>
+</div>
+</div>
+</nav>
+<!-- SideNavBar -->
+<aside class="bg-white/70 backdrop-blur-md text-primary font-body-md text-body-md fixed left-0 top-0 h-full w-64 border-r border-black/5 shadow-md flex flex-col py-md hidden md:flex z-50">
+<div class="px-md mb-xl flex items-center gap-xs">
+<div class="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center text-primary">
+<span class="material-symbols-outlined font-bold" style="font-variation-settings: 'FILL' 1;">medical_services</span>
+</div>
+<div>
+<h1 class="font-headline-lg text-headline-lg-mobile font-bold text-primary leading-none">MediGlass Portal</h1>
+<p class="font-label-sm text-label-sm text-on-surface-variant mt-1">Receptionist View</p>
+</div>
+</div>
+<nav class="flex-1 flex flex-col gap-1 px-sm">
+<a class="flex items-center gap-md px-sm py-3 rounded-lg text-on-surface-variant hover:bg-primary-container/20 transition-colors cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+                Dashboard
+            </a>
+<a class="flex items-center gap-md px-sm py-3 rounded-lg text-primary font-bold border-r-4 border-primary bg-primary-container/10 transition-colors cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">group</span>
+                Patients
+            </a>
+<a class="flex items-center gap-md px-sm py-3 rounded-lg text-on-surface-variant hover:bg-primary-container/20 transition-colors cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined">calendar_today</span>
+                Today's Schedule
+            </a>
+<a class="flex items-center gap-md px-sm py-3 rounded-lg text-on-surface-variant hover:bg-primary-container/20 transition-colors cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined">add_circle</span>
+                Book Appointment
+            </a>
+</nav>
+<div class="mt-auto px-sm pt-4 border-t border-black/5">
+<a class="flex items-center gap-md px-sm py-3 rounded-lg text-on-surface-variant hover:bg-primary-container/20 transition-colors cursor-pointer active:scale-95" href="#">
+<span class="material-symbols-outlined">settings</span>
+                Settings
+            </a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="md:ml-64 pt-24 px-md md:px-lg pb-xl min-h-screen relative">
+<!-- Abstract Background Elements -->
+<div class="fixed top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
+<div class="absolute top-[-10%] right-[-5%] w-[40%] h-[40%] rounded-full bg-primary-container/20 blur-3xl opacity-50"></div>
+<div class="absolute bottom-[-10%] left-[20%] w-[50%] h-[50%] rounded-full bg-secondary-container/30 blur-3xl opacity-50"></div>
+</div>
+<!-- Page Header -->
+<header class="flex flex-col md:flex-row justify-between items-start md:items-end mb-lg gap-4">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Patient Management</h2>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1">Review and manage patient registrations and records.</p>
+</div>
+<button class="bg-primary text-on-primary font-body-md text-body-md px-6 py-2.5 rounded-full hover:bg-primary/90 transition-all shadow-sm flex items-center gap-2 font-medium">
+<span class="material-symbols-outlined text-[20px]">person_add</span>
+                Register Walk-in
+            </button>
+</header>
+<!-- Navigation Tabs (Local) -->
+<div class="flex gap-6 border-b border-outline-variant/30 mb-lg">
+<button class="pb-3 font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors">
+                All Patients
+            </button>
+<button class="pb-3 font-body-md text-body-md text-primary font-bold border-b-2 border-primary transition-colors">
+                Pending Approval
+                <span class="ml-2 inline-flex items-center justify-center bg-error-container text-on-error-container text-xs font-bold w-5 h-5 rounded-full">3</span>
+</button>
+<button class="pb-3 font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[18px]">search</span> Search
+            </button>
+</div>
+<div class="flex flex-col lg:flex-row gap-lg">
+<!-- Sidebar Filter -->
+<div class="w-full lg:w-64 flex-shrink-0">
+<div class="glass-panel glass-highlight rounded-xl p-md">
+<h3 class="font-title-md text-title-md text-on-surface mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]">tune</span>
+                        Quick Filters
+                    </h3>
+<div class="space-y-6">
+<div>
+<label class="font-label-sm text-label-sm text-on-surface-variant block mb-2 uppercase tracking-wider">Status</label>
+<div class="space-y-2">
+<label class="flex items-center gap-2 cursor-pointer">
+<input checked="" class="rounded border-outline-variant text-primary focus:ring-primary bg-surface/50" type="checkbox"/>
+<span class="font-body-md text-body-md text-on-surface">Needs Review</span>
+</label>
+<label class="flex items-center gap-2 cursor-pointer">
+<input class="rounded border-outline-variant text-primary focus:ring-primary bg-surface/50" type="checkbox"/>
+<span class="font-body-md text-body-md text-on-surface">Missing Info</span>
+</label>
+</div>
+</div>
+<div>
+<label class="font-label-sm text-label-sm text-on-surface-variant block mb-2 uppercase tracking-wider">Date Requested</label>
+<select class="w-full bg-surface-container-low/50 border border-outline-variant/30 rounded-lg py-2 px-3 text-on-surface focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors font-body-md text-body-md appearance-none">
+<option>Today</option>
+<option>Last 7 Days</option>
+<option>Older</option>
+</select>
+</div>
+</div>
+</div>
+</div>
+<!-- Main Data Canvas -->
+<div class="flex-1">
+<div class="glass-panel glass-highlight rounded-xl overflow-hidden">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-black/5 bg-surface-container-low/30">
+<th class="font-label-sm text-label-sm text-on-surface-variant py-4 px-md uppercase font-semibold">Patient Name</th>
+<th class="font-label-sm text-label-sm text-on-surface-variant py-4 px-md uppercase font-semibold">Date Requested</th>
+<th class="font-label-sm text-label-sm text-on-surface-variant py-4 px-md uppercase font-semibold">Contact Info</th>
+<th class="font-label-sm text-label-sm text-on-surface-variant py-4 px-md uppercase font-semibold text-right">Action</th>
+</tr>
+</thead>
+<tbody class="font-body-md text-body-md">
+<!-- Row 1 -->
+<tr class="border-b border-black/5 hover:bg-surface-variant/20 transition-colors">
+<td class="py-4 px-md">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-sm">
+                                                EJ
+                                            </div>
+<div>
+<p class="font-medium text-on-surface">Eleanor Jenkins</p>
+<p class="text-xs text-on-surface-variant">DOB: 05/12/1984</p>
+</div>
+</div>
+</td>
+<td class="py-4 px-md text-on-surface-variant">Today, 08:45 AM</td>
+<td class="py-4 px-md text-on-surface-variant">
+<div>e.jenkins@email.com</div>
+<div class="text-sm">(555) 123-4567</div>
+</td>
+<td class="py-4 px-md text-right">
+<div class="flex justify-end gap-2">
+<button class="px-4 py-1.5 rounded-full border border-error text-error hover:bg-error/10 transition-colors text-sm font-medium">Reject</button>
+<button class="px-4 py-1.5 rounded-full bg-[#10b981] text-white hover:bg-[#059669] transition-colors text-sm font-medium">Approve</button>
+</div>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="border-b border-black/5 hover:bg-surface-variant/20 transition-colors">
+<td class="py-4 px-md">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-bold text-sm">
+                                                MW
+                                            </div>
+<div>
+<p class="font-medium text-on-surface">Marcus Webb</p>
+<p class="text-xs text-on-surface-variant">DOB: 11/02/1992</p>
+</div>
+</div>
+</td>
+<td class="py-4 px-md text-on-surface-variant">Today, 09:12 AM</td>
+<td class="py-4 px-md text-on-surface-variant">
+<div>m.webb.design@email.com</div>
+<div class="text-sm">(555) 987-6543</div>
+</td>
+<td class="py-4 px-md text-right">
+<div class="flex justify-end gap-2">
+<button class="px-4 py-1.5 rounded-full border border-error text-error hover:bg-error/10 transition-colors text-sm font-medium">Reject</button>
+<button class="px-4 py-1.5 rounded-full bg-[#10b981] text-white hover:bg-[#059669] transition-colors text-sm font-medium">Approve</button>
+</div>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-variant/20 transition-colors">
+<td class="py-4 px-md">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-tertiary-container text-on-tertiary-container flex items-center justify-center font-bold text-sm">
+                                                SL
+                                            </div>
+<div>
+<p class="font-medium text-on-surface">Sophia Lin</p>
+<p class="text-xs text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-error">warning</span>
+                                                    Missing Insurance Info
+                                                </p>
+</div>
+</div>
+</td>
+<td class="py-4 px-md text-on-surface-variant">Yesterday, 16:30 PM</td>
+<td class="py-4 px-md text-on-surface-variant">
+<div>sophia.lin99@email.com</div>
+<div class="text-sm">(555) 444-3333</div>
+</td>
+<td class="py-4 px-md text-right">
+<div class="flex justify-end gap-2">
+<button class="px-4 py-1.5 rounded-full border border-error text-error hover:bg-error/10 transition-colors text-sm font-medium">Reject</button>
+<button class="px-4 py-1.5 rounded-full bg-[#10b981] text-white hover:bg-[#059669] transition-colors text-sm font-medium opacity-50 cursor-not-allowed">Approve</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

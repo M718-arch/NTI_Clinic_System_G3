@@ -1,30 +1,56 @@
+// resources/js/app.jsx
+
 import './bootstrap';
 import React, { useState, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
+import '../css/receptionist-theme.css';
 import { BrowserRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ToastProvider, useToast } from './components/shared/ToastProvider';
+
+// Patient Components
 import PatientDashboard from './components/Patient/Dashboard';
 import PatientServices from './components/Patient/Services';
 import PatientBookings from './components/Patient/Bookings';
 import PatientProfile from './components/Patient/Profile';
+import { PatientMessages } from './components/Patient/Messages';
+
+// Doctor Components
 import DoctorDashboard from "./components/Doctor/d_dashboard";
 import { PatientList } from './components/Doctor/pages/PatientList';
 import Calendar from './components/Doctor/pages/Calendar';
 import { Messages } from './components/Doctor/pages/Messages';
-import { PatientMessages } from './components/Patient/Messages';
-import api from './api/client';
-import '@fontsource/inter/400.css';
-import '@fontsource/inter/500.css';
-import '@fontsource/inter/600.css';
-import '@fontsource/inter/700.css';
-import '@fontsource/inter/800.css';
 
-// ---------------------------------------------------------------------------
-// Clinical Clarity Glass — tokens copied 1:1 from the reference mockup
-// (code.html), not just DESIGN.md, since that mockup is the visual source
-// of truth: colors, blur radii, and opacities are the literal values used
-// there rather than approximations.
-// ---------------------------------------------------------------------------
+// Receptionist Components (Phase 5 & 6)
+import ReceptionistLayout from './components/receptionist/ReceptionistLayout';
+import ReceptionistDashboard from './components/receptionist/Dashboard';
+import Patients from './components/receptionist/Patients';
+import TodaySchedule from './components/receptionist/TodaySchedule';
+import BookAppointment from './components/receptionist/BookAppointment';
+import WalkInRegistration from './components/receptionist/WalkInRegistration';
+import Settings from './components/receptionist/Settings';
+
+// Phase 6: Billing Components
+import Invoices from './components/receptionist/Invoices';
+import InvoiceDetail from './components/receptionist/InvoiceDetail';
+import CreateInvoice from './components/receptionist/CreateInvoice';
+
+// Phase 7: Admin Components
+import AdminLayout from './components/admin/AdminLayout';
+import Reports from './components/admin/Reports';
+import AdminDashboard from './components/admin/Dashboard';  // Add this
+import AdminDoctors from './components/admin/Doctors';      // Add this
+import AdminPatients from './components/admin/Patients';    // Add this
+import AdminAppointments from './components/admin/Appointments'; // Add this
+import AdminReceptionists from './components/admin/Receptionists'; // Add this
+import AdminBilling from './components/admin/Billing';      // Add this
+
+import api from './api/client';
+
+// =============================================================================
+// CLINICAL CLARITY GLASS — Theme Constants
+// =============================================================================
+
 const c = {
     primary: '#003f87',
     primaryContainer: '#0056b3',
@@ -43,14 +69,12 @@ const c = {
     background: '#f8f9ff',
 };
 
-// Exact glass-panel / glass-button-primary / ambient-shadow classes from the mockup's <style> block.
 const glassPanel = 'bg-white/60 backdrop-blur-[16px] border border-white/80';
 const ambientShadow = 'shadow-[0_8px_32px_0_rgba(0,86,179,0.05)]';
 const glassButtonPrimary = 'bg-[rgba(0,86,179,0.9)] backdrop-blur-[8px] border border-white/20 shadow-[0_4px_15px_rgba(0,86,179,0.3)] hover:bg-[#0056b3]';
 const pageGradient = { background: 'linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%)' };
 
-// Material Symbols icon — the mockup uses Google's Material Symbols
-// (rounded, variable-weight), not Lucide, so this matches it exactly.
+// Material Symbols Icon Component
 const MIcon = ({ name, filled = false, className = '' }) => (
     <span
         className={`material-symbols-outlined select-none ${className}`}
@@ -60,9 +84,7 @@ const MIcon = ({ name, filled = false, className = '' }) => (
     </span>
 );
 
-// Injects the mockup's exact fonts once: Inter (all text, per the mockup's
-// own tailwind config — every fontFamily role there maps to Inter) and
-// Material Symbols Outlined for icons.
+// Font Loader Hook
 const useGlassFonts = () => {
     useEffect(() => {
         if (document.getElementById('glass-fonts')) return;
@@ -73,6 +95,10 @@ const useGlassFonts = () => {
         document.head.appendChild(link);
     }, []);
 };
+
+// =============================================================================
+// PROTECTED ROUTE COMPONENT
+// =============================================================================
 
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
     const { user, loading } = useAuth();
@@ -91,15 +117,17 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
     }
 
     if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
-        const dashboardPath = `/${user.role}`;
+        const dashboardPath = `/${user.role}/dashboard`;
         return <Navigate to={dashboardPath} replace />;
     }
 
     return children;
 };
 
-// Notification bell — same polling / mark-as-read behavior as before,
-// restyled with the mockup's real glass-panel values.
+// =============================================================================
+// NOTIFICATION BELL COMPONENT
+// =============================================================================
+
 const NotificationBell = () => {
     const [notifications, setNotifications] = useState([]);
     const [open, setOpen] = useState(false);
@@ -205,6 +233,10 @@ const NotificationBell = () => {
     );
 };
 
+// =============================================================================
+// PATIENT SIDEBAR
+// =============================================================================
+
 const NAV_ITEMS = [
     { to: '/patient', label: 'Overview', icon: 'dashboard', exact: true },
     { to: '/patient/services', label: 'Services', icon: 'medical_services' },
@@ -278,9 +310,11 @@ const Sidebar = ({ unreadMessages, onLogout }) => {
     );
 };
 
-// Glass sidebar shell — used for patient pages only.
-// Doctor pages render their own Sidebar, so they skip this wrapper (see PlainLayout below).
-const Layout = ({ children }) => {
+// =============================================================================
+// PATIENT LAYOUT
+// =============================================================================
+
+const PatientLayout = ({ children }) => {
     const { user, logout } = useAuth();
     const [unreadMessages, setUnreadMessages] = useState(0);
     const location = useLocation();
@@ -314,17 +348,13 @@ const Layout = ({ children }) => {
         logout();
     };
 
-    const updateUnreadCount = () => {
-        fetchUnreadCount();
-    };
-
     return (
         <div className="flex min-h-screen overflow-hidden font-['Inter'] text-[#121c28]" style={pageGradient}>
             <Sidebar unreadMessages={unreadMessages} onLogout={handleLogout} />
 
             <main className={`ml-64 flex-1 h-screen overflow-y-auto p-6 md:p-10 relative ${onMessagesPage ? 'flex flex-col overflow-hidden' : ''}`}>
                 <header className="flex justify-end items-center gap-3 mb-10">
-                    {user?.role === 'patient' && <NotificationBell />}
+                    <NotificationBell />
                     <div className={`w-10 h-10 rounded-full overflow-hidden flex items-center justify-center cursor-pointer border-2 border-white shadow-sm text-sm font-semibold text-[#003f87] bg-white/70`}>
                         {(user?.name || 'P').charAt(0).toUpperCase()}
                     </div>
@@ -333,7 +363,7 @@ const Layout = ({ children }) => {
                 <div className={`max-w-[1280px] mx-auto ${onMessagesPage ? 'flex-1 flex flex-col overflow-hidden' : ''}`}>
                     {React.Children.map(children, child => {
                         if (React.isValidElement(child)) {
-                            return React.cloneElement(child, { updateUnreadCount });
+                            return React.cloneElement(child, { updateUnreadCount: fetchUnreadCount });
                         }
                         return child;
                     })}
@@ -343,94 +373,175 @@ const Layout = ({ children }) => {
     );
 };
 
-// Plain wrapper for doctor pages — no top navbar, since doctor components
-// (e.g. d_dashboard, Calendar, Messages, PatientList) render their own Sidebar.
+// =============================================================================
+// PLAIN LAYOUT (Doctor)
+// =============================================================================
+// Top bar removed — the Doctor Sidebar (Sidebar.jsx) already has its own
+// Logout button, so no functionality is lost by dropping this header.
+
 const PlainLayout = ({ children }) => {
-    return <>{children}</>;
+    return (
+        <div className="min-h-screen bg-gray-50">
+            <main className="p-6">
+                {children}
+            </main>
+        </div>
+    );
 };
+
+// =============================================================================
+// ROLE-BASED REDIRECT
+// =============================================================================
+
+const RoleBasedRedirect = () => {
+    const { user, loading } = useAuth();
+
+    if (loading) {
+        return (
+            <div className="flex justify-center items-center min-h-screen" style={pageGradient}>
+                <div className="text-xl text-[#424752] font-['Inter']">Loading...</div>
+            </div>
+        );
+    }
+
+    if (!user) {
+        window.location.href = '/login';
+        return null;
+    }
+
+    switch (user.role) {
+        case 'patient':
+            return <Navigate to="/patient/dashboard" replace />;
+        case 'doctor':
+            return <Navigate to="/doctor/dashboard" replace />;
+        case 'receptionist':
+            return <Navigate to="/receptionist/dashboard" replace />;
+        case 'admin':
+            return <Navigate to="/admin/reports" replace />;
+        default:
+            window.location.href = '/login';
+            return null;
+    }
+};
+
+// =============================================================================
+// MAIN APP COMPONENT
+// =============================================================================
 
 const App = () => {
     return (
         <AuthProvider>
-            <BrowserRouter>
-                <Routes>
-                    <Route path="/patient/messages" element={
-                        <ProtectedRoute allowedRoles={['patient']}>
-                            <Layout><PatientMessages /></Layout>
-                        </ProtectedRoute>
-                    } />
+            <ToastProvider>
+                <BrowserRouter>
+                    <Routes>
+                        {/* Patient Routes */}
+                        <Route path="/patient" element={
+                            <ProtectedRoute allowedRoles={['patient']}>
+                                <PatientLayout><PatientDashboard /></PatientLayout>
+                            </ProtectedRoute>
+                        } />
+                        <Route path="/patient/dashboard" element={
+                            <ProtectedRoute allowedRoles={['patient']}>
+                                <PatientLayout><PatientDashboard /></PatientLayout>
+                            </ProtectedRoute>
+                        } />
+                        <Route path="/patient/services" element={
+                            <ProtectedRoute allowedRoles={['patient']}>
+                                <PatientLayout><PatientServices /></PatientLayout>
+                            </ProtectedRoute>
+                        } />
+                        <Route path="/patient/my-bookings" element={
+                            <ProtectedRoute allowedRoles={['patient']}>
+                                <PatientLayout><PatientBookings /></PatientLayout>
+                            </ProtectedRoute>
+                        } />
+                        <Route path="/patient/messages" element={
+                            <ProtectedRoute allowedRoles={['patient']}>
+                                <PatientLayout><PatientMessages /></PatientLayout>
+                            </ProtectedRoute>
+                        } />
+                        <Route path="/patient/profile" element={
+                            <ProtectedRoute allowedRoles={['patient']}>
+                                <PatientLayout><PatientProfile /></PatientLayout>
+                            </ProtectedRoute>
+                        } />
 
-                    <Route path="/doctor/messages" element={
-                        <ProtectedRoute allowedRoles={['doctor']}>
-                            <PlainLayout><Messages /></PlainLayout>
-                        </ProtectedRoute>
-                    } />
+                        {/* Doctor Routes */}
+                        <Route path="/doctor" element={
+                            <ProtectedRoute allowedRoles={['doctor']}>
+                                <PlainLayout><DoctorDashboard /></PlainLayout>
+                            </ProtectedRoute>
+                        } />
+                        <Route path="/doctor/dashboard" element={
+                            <ProtectedRoute allowedRoles={['doctor']}>
+                                <PlainLayout><DoctorDashboard /></PlainLayout>
+                            </ProtectedRoute>
+                        } />
+                        <Route path="/doctor/calendar" element={
+                            <ProtectedRoute allowedRoles={['doctor']}>
+                                <PlainLayout><Calendar /></PlainLayout>
+                            </ProtectedRoute>
+                        } />
+                        <Route path="/doctor/patients" element={
+                            <ProtectedRoute allowedRoles={['doctor']}>
+                                <PlainLayout><PatientList /></PlainLayout>
+                            </ProtectedRoute>
+                        } />
+                        <Route path="/doctor/messages" element={
+                            <ProtectedRoute allowedRoles={['doctor']}>
+                                <PlainLayout><Messages /></PlainLayout>
+                            </ProtectedRoute>
+                        } />
 
-                    <Route path="/patient" element={
-                        <ProtectedRoute allowedRoles={['patient']}>
-                            <Layout><PatientDashboard /></Layout>
-                        </ProtectedRoute>
-                    } />
-                    <Route path="/patient/services" element={
-                        <ProtectedRoute allowedRoles={['patient']}>
-                            <Layout><PatientServices /></Layout>
-                        </ProtectedRoute>
-                    } />
-                    <Route path="/patient/my-bookings" element={
-                        <ProtectedRoute allowedRoles={['patient']}>
-                            <Layout><PatientBookings /></Layout>
-                        </ProtectedRoute>
-                    } />
-                    <Route path="/patient/profile" element={
-                        <ProtectedRoute allowedRoles={['patient']}>
-                            <Layout><PatientProfile /></Layout>
-                        </ProtectedRoute>
-                    } />
+                        {/* Receptionist Routes (Phase 5 & 6) */}
+                        <Route path="/receptionist" element={
+                            <ProtectedRoute allowedRoles={['receptionist']}>
+                                <ReceptionistLayout />
+                            </ProtectedRoute>
+                        }>
+                            <Route index element={<ReceptionistDashboard />} />
+                            <Route path="dashboard" element={<ReceptionistDashboard />} />
+                            <Route path="patients" element={<Patients />} />
+                            <Route path="patients/walk-in" element={<WalkInRegistration />} />
+                            <Route path="schedule" element={<TodaySchedule />} />
+                            <Route path="appointments/book" element={<BookAppointment />} />
+                            <Route path="settings" element={<Settings />} />
+                            
+                            {/* Phase 6: Billing Routes */}
+                            <Route path="invoices" element={<Invoices />} />
+                            <Route path="invoices/:id" element={<InvoiceDetail />} />
+                            <Route path="invoices/create" element={<CreateInvoice />} />
+                        </Route>
 
-                    <Route path="/doctor" element={
-                        <ProtectedRoute allowedRoles={['doctor']}>
-                            <PlainLayout><DoctorDashboard /></PlainLayout>
-                        </ProtectedRoute>
-                    } />
-                    <Route path="/doctor/calendar" element={
-                        <ProtectedRoute allowedRoles={['doctor']}>
-                            <PlainLayout><Calendar /></PlainLayout>
-                        </ProtectedRoute>
-                    } />
-                    <Route path="/doctor/services" element={
-                        <ProtectedRoute allowedRoles={['doctor']}>
-                            <PlainLayout><DoctorDashboard /></PlainLayout>
-                        </ProtectedRoute>
-                    } />
-                    <Route path="/doctor/bookings" element={
-                        <ProtectedRoute allowedRoles={['doctor']}>
-                            <PlainLayout><DoctorDashboard /></PlainLayout>
-                        </ProtectedRoute>
-                    } />
-                    <Route path="/doctor/patients" element={
-                        <ProtectedRoute allowedRoles={['doctor']}>
-                            <PlainLayout><PatientList /></PlainLayout>
-                        </ProtectedRoute>
-                    } />
-                    <Route path="/doctor/profile" element={
-                        <ProtectedRoute allowedRoles={['doctor']}>
-                            <PlainLayout><div className="text-2xl font-bold text-slate-800">Doctor Profile</div></PlainLayout>
-                        </ProtectedRoute>
-                    } />
+                        {/* Phase 7: Admin Routes */}
+                        <Route path="/admin" element={
+    <ProtectedRoute allowedRoles={['admin']}>
+        <AdminLayout />
+    </ProtectedRoute>
+}>
+    <Route index element={<Navigate to="/admin/dashboard" replace />} />
+    <Route path="dashboard" element={<AdminDashboard />} />
+    <Route path="reports" element={<Reports />} />
+    <Route path="doctors" element={<AdminDoctors />} />
+    <Route path="patients" element={<AdminPatients />} />
+    <Route path="appointments" element={<AdminAppointments />} />
+    <Route path="receptionists" element={<AdminReceptionists />} />
+    <Route path="billing" element={<AdminBilling />} />
+</Route>
 
-                    <Route path="/admin" element={
-                        <ProtectedRoute allowedRoles={['admin']}>
-                            <Layout><div className="text-2xl font-bold text-slate-800">Admin Dashboard</div></Layout>
-                        </ProtectedRoute>
-                    } />
-
-                    <Route path="/" element={<Navigate to="/patient" replace />} />
-                    <Route path="*" element={<Navigate to="/patient" replace />} />
-                </Routes>
-            </BrowserRouter>
+                        {/* Root & Catch-all */}
+                        <Route path="/" element={<RoleBasedRedirect />} />
+                        <Route path="*" element={<RoleBasedRedirect />} />
+                    </Routes>
+                </BrowserRouter>
+            </ToastProvider>
         </AuthProvider>
     );
 };
+
+// =============================================================================
+// BOOTSTRAP
+// =============================================================================
 
 const rootElement = document.getElementById('app');
 if (rootElement) {

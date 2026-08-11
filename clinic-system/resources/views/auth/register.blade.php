@@ -3,7 +3,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Create Account · Clinic Management System</title>
 
-    <meta name="description" content="Create an account onthe Clinic Management System as a patient or doctor.">
+    <meta name="description" content="Create an account on the Clinic Management System as a patient.">
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -17,6 +17,177 @@
 
     <!-- App styles -->
     <link rel="stylesheet" href="{{ asset('css/login.css')}}">
+    
+    <style>
+        /* Make all input text white when typing */
+        .form-control {
+            color: #ffffff !important;
+            background: rgba(255, 255, 255, 0.06) !important;
+            border: 1px solid rgba(255, 255, 255, 0.12) !important;
+            border-radius: 12px;
+            padding: 12px 16px !important;
+            padding-left: 44px !important;
+            height: auto !important;
+        }
+        .form-control:focus {
+            color: #ffffff !important;
+            background: rgba(255, 255, 255, 0.08) !important;
+            border-color: #06B6D4 !important;
+            box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.15) !important;
+        }
+        /* Hide placeholder text to avoid duplication with floating labels */
+        .form-control::placeholder {
+            color: transparent !important;
+        }
+        /* Fix for date input */
+        input[type="date"].form-control {
+            color: #ffffff !important;
+            min-height: 48px !important;
+        }
+        input[type="date"].form-control::-webkit-datetime-edit {
+            color: #ffffff !important;
+        }
+        input[type="date"].form-control::-webkit-datetime-edit-text {
+            color: #ffffff !important;
+        }
+        input[type="date"].form-control::-webkit-datetime-edit-month-field {
+            color: #ffffff !important;
+        }
+        input[type="date"].form-control::-webkit-datetime-edit-day-field {
+            color: #ffffff !important;
+        }
+        input[type="date"].form-control::-webkit-datetime-edit-year-field {
+            color: #ffffff !important;
+        }
+        input[type="date"].form-control::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            cursor: pointer;
+        }
+        /* Fix for select dropdowns */
+        select.form-control {
+            color: #ffffff !important;
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='rgba(255,255,255,0.4)' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+            padding-right: 40px !important;
+        }
+        select.form-control option {
+            color: #000000 !important;
+            background: #ffffff !important;
+        }
+        /* Fix for textarea */
+        textarea.form-control {
+            color: #ffffff !important;
+            min-height: 80px !important;
+        }
+        textarea.form-control::placeholder {
+            color: transparent !important;
+        }
+        /* Fix for password inputs */
+        input[type="password"].form-control {
+            color: #ffffff !important;
+        }
+        /* Form control wrap - floating label styles */
+        .form-control-wrap {
+            position: relative;
+        }
+        .form-control-wrap .input-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: rgba(255, 255, 255, 0.4);
+            z-index: 2;
+            pointer-events: none;
+        }
+        .form-control-wrap .form-label {
+            position: absolute;
+            left: 44px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: rgba(255, 255, 255, 0.5);
+            transition: all 0.2s ease;
+            pointer-events: none;
+            margin: 0;
+            font-size: 15px;
+            font-weight: 400;
+            z-index: 2;
+            background: transparent;
+        }
+        .form-control-wrap .form-control:focus ~ .form-label,
+        .form-control-wrap .form-control:not(:placeholder-shown) ~ .form-label {
+            top: -10px;
+            left: 14px;
+            font-size: 11px;
+            color: #06B6D4;
+            background: #1a1a2e;
+            padding: 0 6px;
+            transform: translateY(0);
+        }
+        .form-control-wrap .form-control:focus ~ .form-label {
+            color: #06B6D4;
+        }
+        /* Fix for date input label */
+        .form-control-wrap input[type="date"]:not(:placeholder-shown) ~ .form-label,
+        .form-control-wrap input[type="date"]:focus ~ .form-label {
+            top: -10px;
+            left: 14px;
+            font-size: 11px;
+            color: #06B6D4;
+            background: #1a1a2e;
+            padding: 0 6px;
+            transform: translateY(0);
+        }
+        /* Fix for textarea label */
+        .form-control-wrap textarea:focus ~ .form-label,
+        .form-control-wrap textarea:not(:placeholder-shown) ~ .form-label {
+            top: -10px !important;
+            left: 14px !important;
+            font-size: 11px !important;
+            color: #06B6D4 !important;
+            background: #1a1a2e !important;
+            padding: 0 6px !important;
+            transform: translateY(0) !important;
+        }
+        .form-control-wrap .password-toggle {
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.4);
+            cursor: pointer;
+            padding: 4px;
+            z-index: 2;
+            transition: color 0.3s ease;
+        }
+        .form-control-wrap .password-toggle:hover {
+            color: rgba(255, 255, 255, 0.8);
+        }
+        .form-control-wrap .password-toggle:focus {
+            outline: none;
+        }
+        .invalid-feedback {
+            color: #ef4444 !important;
+            font-size: 12px;
+            margin-top: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .invalid-feedback i {
+            font-size: 14px;
+        }
+        .form-control.is-invalid {
+            border-color: #ef4444 !important;
+        }
+        .form-control.is-invalid:focus {
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
+        }
+    </style>
 </head>
 <body>
 
@@ -43,7 +214,7 @@
             </div>
 
             <h1 class="hero-heading">
-                Join a <span class="text-gradient">smarterway</span> to manage care
+                Join a <span class="text-gradient">smarter way</span> to manage care
             </h1>
             <p class="hero-desc">
                 Create your account to book appointments, manage patients, and keep
@@ -52,22 +223,22 @@
 
             <div class="feature-grid">
                 <div class="feature-card">
-                    <div class="feature-icon"><i class="bibi-people-fill"></i></div>
+                    <div class="feature-icon"><i class="bi bi-people-fill"></i></div>
                     <div class="feature-title">Patients</div>
                     <div class="feature-desc">Centralized profiles, history and contact details in one place.</div>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon"><i class="bibi-clipboard2-pulse-fill"></i></div>
+                    <div class="feature-icon"><i class="bi bi-clipboard2-pulse-fill"></i></div>
                     <div class="feature-title">Doctors</div>
                     <div class="feature-desc">Manage specialties, schedules and availability with ease.</div>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon"><i class="bibi-calendar2-check-fill"></i></div>
+                    <div class="feature-icon"><i class="bi bi-calendar2-check-fill"></i></div>
                     <div class="feature-title">Appointments</div>
                     <div class="feature-desc">Book, reschedule and track visits without the back-and-forth.</div>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon"><i class="bibi-file-earmark-medical-fill"></i></div>
+                    <div class="feature-icon"><i class="bi bi-file-earmark-medical-fill"></i></div>
                     <div class="feature-title">Medical Records</div>
                     <div class="feature-desc">Secure, structured records available whenever they're needed.</div>
                 </div>
@@ -76,11 +247,16 @@
             <div class="hero-illustration">
                 <img src="{{ asset('images/doctor-illustration.svg') }}" alt="Illustration of a doctor with a clipboard and stethoscope">
             </div>
+
+            <!-- Copyright on left panel -->
+            <p class="page-footer" style="position: absolute; bottom: 24px; left: 40px; right: 40px; text-align: left; color: rgba(255,255,255,0.4); font-size: 13px; margin: 0; letter-spacing: 0.3px;">
+                © {{ date('Y') }} Clinic Management System. All rights reserved.
+            </p>
         </section>
 
         <!-- ============ RIGHT: REGISTER CARD ============ -->
-        <section class="form-panel">
-            <div class="glass-card">
+        <section class="form-panel" style="flex: 1; max-width: 100%;">
+            <div class="glass-card" style="max-width: 800px; width: 100%; padding: 48px 56px;">
 
                 <!-- mobile-only brand mark -->
                 <div class="hero-brand d-lg-none" style="margin-bottom: 24px;">
@@ -117,11 +293,11 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('register') }}" data-loading-form novalidate>
+                <form method="POST" action="{{ route('register') }}" data-loading-form novalidate style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px 24px;">
                     @csrf
 
                     <!-- Full Name -->
-                    <div class="form-group">
+                    <div class="form-group" style="grid-column: span 2;">
                         <div class="form-control-wrap">
                             <i class="bi bi-person-fill input-icon"></i>
                             <input
@@ -130,7 +306,7 @@
                                 name="name"
                                 value="{{ old('name') }}"
                                 class="form-control @error('name') is-invalid @enderror"
-                                placeholder="Full name"
+                                placeholder=" "
                                 autocomplete="name"
                                 required
                                 autofocus
@@ -143,7 +319,7 @@
                     </div>
 
                     <!-- Email -->
-                    <div class="form-group">
+                    <div class="form-group" style="grid-column: span 2;">
                         <div class="form-control-wrap">
                             <i class="bi bi-envelope-fill input-icon"></i>
                             <input
@@ -152,7 +328,7 @@
                                 name="email"
                                 value="{{ old('email') }}"
                                 class="form-control @error('email') is-invalid @enderror"
-                                placeholder="Email address"
+                                placeholder=" "
                                 autocomplete="username"
                                 required
                             >
@@ -164,7 +340,7 @@
                     </div>
 
                     <!-- Phone -->
-                    <div class="form-group">
+                    <div class="form-group" style="grid-column: span 1;">
                         <div class="form-control-wrap">
                             <i class="bi bi-telephone-fill input-icon"></i>
                             <input
@@ -173,7 +349,7 @@
                                 name="phone"
                                 value="{{ old('phone') }}"
                                 class="form-control @error('phone') is-invalid @enderror"
-                                placeholder="Phone number"
+                                placeholder=" "
                                 autocomplete="tel"
                             >
                             <label for="phone" class="form-label">Phone number</label>
@@ -183,193 +359,95 @@
                         @enderror
                     </div>
 
-                    <!-- Role selection -->
-                    <div class="form-group">
-                        <div class="role-group" role="radiogroup" aria-label="Register as">
-                            <div
-                                class="role-card @if(old('role') === 'patient') selected @endif"
-                                data-role-value="patient"
-                                role="radio"
-                                tabindex="0"
-                                aria-checked="{{ old('role') === 'patient' ? 'true' : 'false' }}"
-                            >
-                                <span class="role-card-check"><i class="bi bi-check-lg"></i></span>
-                                <div class="role-card-icon"><i class="bi bi-person-fill"></i></div>
-                                <div class="role-card-title">Patient</div>
-                                <div class="role-card-desc">Book appointments, access medical records and communicatewith doctors.</div>
-                            </div>
-
-                            <div
-                                class="role-card @if(old('role') === 'doctor') selected @endif"
-                                data-role-value="doctor"
-                                role="radio"
-                                tabindex="-1"
-                                aria-checked="{{ old('role') === 'doctor' ? 'true' : 'false' }}"
-                            >
-                                <span class="role-card-check"><i class="bi bi-check-lg"></i></span>
-                                <div class="role-card-icon"><i class="bi bi-clipboard2-pulse-fill"></i></div>
-                                <div class="role-card-title">Doctor</div>
-                                <div class="role-card-desc">Manage patients, appointments, prescriptions and schedules.</div>
-                            </div>
+                    <!-- Gender -->
+                    <div class="form-group" style="grid-column: span 1;">
+                        <div class="form-control-wrap">
+                            <i class="bi bi-gender-ambiguous input-icon"></i>
+                            <select name="patient_gender" class="form-control">
+                                <option value="">Select gender</option>
+                                <option value="male" {{ old('patient_gender') == 'male' ? 'selected' : '' }}>Male</option>
+                                <option value="female" {{ old('patient_gender') == 'female' ? 'selected' : '' }}>Female</option>
+                            </select>
                         </div>
+                    </div>
 
-                        <input type="hidden" name="role" id="role-input" value="{{ old('role') }}">
-
-                        @error('role')
+                    <!-- Date of Birth -->
+                    <div class="form-group" style="grid-column: span 1;">
+                        <div class="form-control-wrap">
+                            <i class="bi bi-calendar-fill input-icon"></i>
+                            <input 
+                                type="date" 
+                                name="date_of_birth" 
+                                value="{{ old('date_of_birth') }}"
+                                id="date_of_birth"
+                                class="form-control @error('date_of_birth') is-invalid @enderror"
+                                placeholder=" "
+                                onfocus="this.showPicker && this.showPicker()"
+                            >
+                            <label for="date_of_birth" class="form-label">Date of birth</label>
+                        </div>
+                        @error('date_of_birth')
                             <div class="invalid-feedback"><i class="bi bi-exclamation-circle-fill"></i>{{ $message }}</div>
                         @enderror
                     </div>
 
-                    <!-- Doctor-specific fields -->
-                    <div id="doctor-fields" style="display:none;">
-
-                        <div class="form-group">
-                            <div class="form-control-wrap">
-                                <i class="bi bi-clipboard2-pulse-fill input-icon"></i>
-                                <select id="specialization_id" name="specialization_id" class="form-control @error('specialization_id') is-invalid @enderror">
-                                    <option value="">Select specialization</option>
-                                    @foreach($specializations as $id => $name)
-                                        <option value="{{ $id }}" {{ old('specialization_id') == $id ? 'selected' : '' }}>{{ $name }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            @error('specialization_id')
-                                <div class="invalid-feedback"><i class="bi bi-exclamation-circle-fill"></i>{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="form-group">
-                            <div class="form-control-wrap">
-                                <i class="bi bi-gender-ambiguous input-icon"></i>
-                                <select name="doctor_gender" class="form-control @error('doctor_gender') is-invalid @enderror">
-                                    <option value="">Select gender</option>
-                                    <option value="male" {{ old('doctor_gender') == 'male' ? 'selected' : '' }}>Male</option>
-                                    <option value="female" {{ old('doctor_gender') == 'female' ? 'selected' : '' }}>Female</option>
-                                </select>
-                            </div>
-                            @error('doctor_gender')
-                                <div class="invalid-feedback"><i class="bi bi-exclamation-circle-fill"></i>{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="form-group">
-                            <div class="form-control-wrap">
-                                <i class="bi bi-calendar-fill input-icon"></i>
-                                <input type="date" name="doctor_dob" value="{{ old('doctor_dob') }}" class="form-control">
-                                <label class="form-label">Date of birth</label>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <div class="form-control-wrap">
-                                <i class="bi bi-briefcase-fill input-icon"></i>
-                                <input type="number" name="experience_years" value="{{ old('experience_years') }}"
-                                       class="form-control" placeholder="Years of experience" min="0">
-                                <label class="form-label">Years of experience</label>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <div class="form-control-wrap">
-                                <i class="bi bi-cash-stack input-icon"></i>
-                                <input type="number" step="0.01" name="consultation_fee" value="{{ old('consultation_fee') }}"
-                                       class="form-control" placeholder="Consultation fee" min="0">
-                                <label class="form-label">Consultation fee</label>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <div class="form-control-wrap">
-                                <i class="bi bi-geo-alt-fill input-icon"></i>
-                                <input type="text" name="doctor_address" value="{{ old('doctor_address') }}"
-                                       class="form-control" placeholder="Clinic / practice address">
-                                <label class="form-label">Address</label>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <div class="form-control-wrap">
-                                <i class="bi bi-file-earmark-text-fill input-icon"></i>
-                                <textarea name="bio" class="form-control" placeholder="Short bio" rows="3">{{ old('bio') }}</textarea>
-                            </div>
+                    <!-- Blood Group -->
+                    <div class="form-group" style="grid-column: span 1;">
+                        <div class="form-control-wrap">
+                            <i class="bi bi-droplet-fill input-icon"></i>
+                            <select name="blood_group" class="form-control">
+                                <option value="">Select blood group</option>
+                                @foreach(['A+','A-','B+','B-','AB+','AB-','O+','O-'] as $bg)
+                                    <option value="{{ $bg }}" {{ old('blood_group') == $bg ? 'selected' : '' }}>{{ $bg }}</option>
+                                @endforeach
+                            </select>
                         </div>
                     </div>
 
-                    <!-- Patient-specific fields -->
-                    <div id="patient-fields" style="display:none;">
-
-                        <div class="form-group">
-                            <div class="form-control-wrap">
-                                <i class="bi bi-gender-ambiguous input-icon"></i>
-                                <select name="patient_gender" class="form-control">
-                                    <option value="">Select gender</option>
-                                    <option value="male" {{ old('patient_gender') == 'male' ? 'selected' : '' }}>Male</option>
-                                    <option value="female" {{ old('patient_gender') == 'female' ? 'selected' : '' }}>Female</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <div class="form-control-wrap">
-                                <i class="bi bi-calendar-fill input-icon"></i>
-                                <input type="date" name="date_of_birth" value="{{ old('date_of_birth') }}"
-                                       class="form-control @error('date_of_birth') is-invalid @enderror">
-                                <label class="form-label">Date of birth</label>
-                            </div>
-                            @error('date_of_birth')
-                                <div class="invalid-feedback"><i class="bi bi-exclamation-circle-fill"></i>{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="form-group">
-                            <div class="form-control-wrap">
-                                <i class="bi bi-droplet-fill input-icon"></i>
-                                <select name="blood_group" class="form-control">
-                                    <option value="">Select blood group</option>
-                                    @foreach(['A+','A-','B+','B-','AB+','AB-','O+','O-'] as $bg)
-                                        <option value="{{ $bg }}" {{ old('blood_group') == $bg ? 'selected' : '' }}>{{ $bg }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <div class="form-control-wrap">
-                                <i class="bi bi-geo-alt-fill input-icon"></i>
-                                <input type="text" name="patient_address" value="{{ old('patient_address') }}"
-                                       class="form-control" placeholder="Home address">
-                                <label class="form-label">Address</label>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <div class="form-control-wrap">
-                                <i class="bi bi-person-lines-fill input-icon"></i>
-                                <input type="text" name="emergency_contact_name" value="{{ old('emergency_contact_name') }}"
-                                       class="form-control" placeholder="Emergency contact name">
-                                <label class="form-label">Emergency contact name</label>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <div class="form-control-wrap">
-                                <i class="bi bi-telephone-fill input-icon"></i>
-                                <input type="text" name="emergency_contact_phone" value="{{ old('emergency_contact_phone') }}"
-                                       class="form-control" placeholder="Emergency contact phone">
-                                <label class="form-label">Emergency contact phone</label>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <div class="form-control-wrap">
-                                <i class="bi bi-file-earmark-medical-fill input-icon"></i>
-                                <textarea name="medical_history" class="form-control" placeholder="Medical history (optional)" rows="3">{{ old('medical_history') }}</textarea>
-                            </div>
+                    <!-- Address -->
+                    <div class="form-group" style="grid-column: span 2;">
+                        <div class="form-control-wrap">
+                            <i class="bi bi-geo-alt-fill input-icon"></i>
+                            <input type="text" name="patient_address" value="{{ old('patient_address') }}"
+                                   class="form-control" placeholder=" ">
+                            <label class="form-label">Address</label>
                         </div>
                     </div>
+
+                    <!-- Emergency Contact Name -->
+                    <div class="form-group" style="grid-column: span 1;">
+                        <div class="form-control-wrap">
+                            <i class="bi bi-person-lines-fill input-icon"></i>
+                            <input type="text" name="emergency_contact_name" value="{{ old('emergency_contact_name') }}"
+                                   class="form-control" placeholder=" ">
+                            <label class="form-label">Emergency contact name</label>
+                        </div>
+                    </div>
+
+                    <!-- Emergency Contact Phone -->
+                    <div class="form-group" style="grid-column: span 1;">
+                        <div class="form-control-wrap">
+                            <i class="bi bi-telephone-fill input-icon"></i>
+                            <input type="text" name="emergency_contact_phone" value="{{ old('emergency_contact_phone') }}"
+                                   class="form-control" placeholder=" ">
+                            <label class="form-label">Emergency contact phone</label>
+                        </div>
+                    </div>
+
+                    <!-- Medical History -->
+                    <div class="form-group" style="grid-column: span 2;">
+                        <div class="form-control-wrap">
+                            <i class="bi bi-file-earmark-medical-fill input-icon"></i>
+                            <textarea name="medical_history" class="form-control" placeholder=" " rows="3">{{ old('medical_history') }}</textarea>
+                            <label class="form-label" style="top: 16px; transform: none;">Medical history (optional)</label>
+                        </div>
+                    </div>
+
+                    <!-- Hidden role input -->
+                    <input type="hidden" name="role" value="patient">
 
                     <!-- Password -->
-                    <div class="form-group">
+                    <div class="form-group" style="grid-column: span 1;">
                         <div class="form-control-wrap">
                             <i class="bi bi-lock-fill input-icon"></i>
                             <input
@@ -377,7 +455,7 @@
                                 type="password"
                                 name="password"
                                 class="form-control has-toggle @error('password') is-invalid @enderror"
-                                placeholder="Password"
+                                placeholder=" "
                                 autocomplete="new-password"
                                 required
                             >
@@ -392,7 +470,7 @@
                     </div>
 
                     <!-- Confirm Password -->
-                    <div class="form-group">
+                    <div class="form-group" style="grid-column: span 1;">
                         <div class="form-control-wrap">
                             <i class="bi bi-shield-lock-fill input-icon"></i>
                             <input
@@ -400,7 +478,7 @@
                                 type="password"
                                 name="password_confirmation"
                                 class="form-control has-toggle"
-                                placeholder="Confirm password"
+                                placeholder=" "
                                 autocomplete="new-password"
                                 required
                             >
@@ -411,7 +489,8 @@
                         </div>
                     </div>
 
-                    <button type="submit" class="btn-premium" data-loading-button>
+                    <!-- Submit Button - full width -->
+                    <button type="submit" class="btn-premium" data-loading-button style="grid-column: span 2; width: 100%;">
                         <span class="btn-spinner" aria-hidden="true"></span>
                         <span class="btn-label">Create Account</span>
                     </button>
@@ -429,24 +508,12 @@
                 </div>
             </div>
 
-            <p class="page-footer">© {{ date('Y') }} Clinic Management System. All rights reserved.</p>
+            <!-- Mobile copyright (visible only on small screens) -->
+            <p class="page-footer d-lg-none" style="text-align: center; color: rgba(255,255,255,0.4); font-size: 13px; margin-top: 20px; letter-spacing: 0.3px;">
+                © {{ date('Y') }} Clinic Management System. All rights reserved.
+            </p>
         </section>
     </div>
 
     <script src="{{ asset('js/login.js') }}"></script>
-    <script>
-        document.querySelectorAll('.role-card').forEach(function (card) {
-            card.addEventListener('click', function () {
-                var role = card.getAttribute('data-role-value');
-                document.getElementById('doctor-fields').style.display = (role === 'doctor') ? 'block' : 'none';
-                document.getElementById('patient-fields').style.display = (role === 'patient') ? 'block' : 'none';
-            });
-        });
-
-        window.addEventListener('DOMContentLoaded', function () {
-            var currentRole = document.getElementById('role-input').value;
-            if (currentRole === 'doctor') document.getElementById('doctor-fields').style.display = 'block';
-            if (currentRole === 'patient') document.getElementById('patient-fields').style.display = 'block';
-        });
-    </script>
 </body>

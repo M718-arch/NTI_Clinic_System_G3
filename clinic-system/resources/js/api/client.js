@@ -1,3 +1,5 @@
+// resources/js/api/client.js
+
 import axios from 'axios';
 
 const api = axios.create({
@@ -17,8 +19,6 @@ api.interceptors.request.use(
         if (csrfToken) {
             config.headers['X-CSRF-TOKEN'] = csrfToken;
         }
-        
-        
         return config;
     },
     (error) => Promise.reject(error)
@@ -28,6 +28,9 @@ api.interceptors.request.use(
 api.interceptors.response.use(
     (response) => response,
     (error) => {
+        if (error.response?.status === 401) {
+            window.location.href = '/login';
+        }
         console.error('API Error:', error.response?.status, error.response?.data);
         return Promise.reject(error);
     }
