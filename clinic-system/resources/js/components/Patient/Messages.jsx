@@ -401,14 +401,15 @@ export const PatientMessages = () => {
                                     />
                                     <div className="min-w-0 flex-1">
                                         <div className="flex items-center justify-between gap-2">
-                                            <span className={`text-sm truncate ${conv.unread_count > 0 ? 'font-bold text-slate-900' : 'font-semibold text-slate-800'}`}>
-                                                {otherUser?.name ? `Dr. ${otherUser.name}` : 'Unknown User'}
-                                            </span>
-                                            {conv.last_message_time && (
-                                                <span className="text-[10px] text-slate-400 shrink-0">
-                                                    {formatTime(conv.last_message_time)}
-                                                </span>
-                                            )}
+                                            <span className={`text-xs truncate ${conv.unread_count > 0 ? 'text-slate-600 font-medium' : 'text-slate-400'}`}>
+    {typeof conv.last_message === 'string' ? conv.last_message : 'No messages yet'}
+</span>
+
+{conv.last_message_time && typeof conv.last_message_time === 'string' && (
+    <span className="text-[10px] text-slate-400 shrink-0">
+        {formatTime(conv.last_message_time)}
+    </span>
+)}
                                         </div>
                                         <div className="flex items-center justify-between mt-0.5 gap-2">
                                             <span className={`text-xs truncate ${conv.unread_count > 0 ? 'text-slate-600 font-medium' : 'text-slate-400'}`}>

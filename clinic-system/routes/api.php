@@ -36,6 +36,16 @@ use App\Http\Controllers\Api\DoctorInvoiceController;
 // ========== PUBLIC ROUTES ==========
 Route::post('/login', [AuthenticatedSessionController::class, 'store']);
 
+// ========== PUBLIC SERVICE ROUTES (No authentication required) ==========
+// These routes should be accessible to everyone
+Route::get('/services', [ServiceController::class, 'index']);
+Route::get('/services/grouped', [ServiceController::class, 'getServicesGrouped']);
+Route::get('/services/{id}', [ServiceController::class, 'show']);
+Route::get('/doctor/{doctorId}/services', [ServiceController::class, 'getDoctorServices']);
+
+// Debug route (for testing)
+Route::get('/services/debug', [ServiceController::class, 'debug']);
+
 // ========== PROTECTED ROUTES ==========
 Route::middleware('auth:sanctum')->group(function () {
     
@@ -89,6 +99,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/services', [ServiceController::class, 'store']);
         Route::put('/services/{service}', [ServiceController::class, 'update']);
         Route::delete('/services/{service}', [ServiceController::class, 'destroy']);
+        Route::patch('/services/{service}/toggle', [ServiceController::class, 'toggleActive']);
+        
         
         // Bookings
         Route::get('/bookings', [AppointmentController::class, 'doctorBookings']);
@@ -98,12 +110,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('/bookings/{booking}/status', [AppointmentController::class, 'updateStatus']);
 
         // Invoices — Phase 6
-        // NOTE: old getInvoices() route disabled in favor of DoctorInvoiceController
-        // below. Uncomment this and remove the two new routes if getInvoices()
-        // turns out to be the one other screens actually depend on.
-        // Route::get('/invoices', [DoctorController::class, 'getInvoices']);
-
-        // Invoices & Payment Stats — new
         Route::get('/invoices', [DoctorInvoiceController::class, 'index']);
         Route::get('/payment-stats', [DoctorInvoiceController::class, 'stats']);
 
@@ -119,7 +125,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/patients/{patient}/diagnoses', [DoctorEmrController::class, 'storeDiagnosis']);
         Route::post('/patients/{patient}/lab-results', [DoctorEmrController::class, 'storeLabResult']);
         Route::post('/patients/{patient}/radiology-results', [DoctorEmrController::class, 'storeRadiologyResult']);
-
+        Route::put('/patients/{patient}/clinical-records', [DoctorController::class, 'updateClinicalRecords']);
+        Route::get('/patients/{patient}/documents', [DoctorController::class, 'getDocuments']);
+        Route::post('/patients/{patient}/documents', [DoctorController::class, 'uploadDocument']);
+        Route::delete('/patients/{patient}/documents/{document}', [DoctorController::class, 'deleteDocument']);
         // Prescriptions — Doctor creates prescriptions
         Route::get('/prescriptions', [DoctorPrescriptionController::class, 'index']);
         Route::post('/patients/{patient}/prescriptions', [DoctorPrescriptionController::class, 'store']);
@@ -172,7 +181,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/doctors', [PatientController::class, 'getDoctors']);
         Route::get('/doctors/{doctor}/services', [PatientController::class, 'getDoctorServices']);
         
-        // Services
+        // Services - Patient can view services
         Route::get('/services', [ServiceController::class, 'index']);
         Route::get('/services/{service}', [ServiceController::class, 'show']);
         

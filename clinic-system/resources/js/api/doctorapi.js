@@ -1,6 +1,6 @@
 // resources/js/api/doctorapi.js
 
-// Add these methods to your existing createDoctorPhase8Api function
+import api from './client';
 
 export const createDoctorPhase8Api = (token) => {
     const headers = {
@@ -9,44 +9,68 @@ export const createDoctorPhase8Api = (token) => {
         Accept: 'application/json',
     };
 
+    // Used for multipart/form-data requests (file uploads). The shared
+    // `api` axios instance likely sets a default Content-Type of
+    // application/json — axios merges that default into every request's
+    // headers unless a request explicitly overrides the key. Setting
+    // Content-Type to `undefined` here (not omitting it, actually setting
+    // it to undefined) clears that inherited default, so axios detects
+    // the FormData body itself and generates the correct
+    // "multipart/form-data; boundary=..." header. Without this, the
+    // request goes out labeled as JSON while the body is actually
+    // multipart, and PHP can't parse any of the fields out of it —
+    // which is exactly the "document field is required" symptom.
+    const uploadHeaders = {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+        'Content-Type': undefined,
+    };
+
     return {
-        // ... existing methods (getQueue, callPatient, completeConsult, etc.)
+        // ----- Queue -----
+        getQueue: () => {
+            return api.get('/doctor/queue', { headers }).then((res) => res.data);
+        },
+
+        callPatient: (bookingId) => {
+            return api.patch(`/doctor/queue/${bookingId}/call`, {}, { headers }).then((res) => res.data);
+        },
+
+        completeConsult: (bookingId) => {
+            return api.patch(`/doctor/queue/${bookingId}/complete`, {}, { headers }).then((res) => res.data);
+        },
 
         // ----- EMR -----
         getPatientChart: (patientId) => {
-            return api.get(`/doctor/patients/${patientId}/emr`, { headers });
+            return api.get(`/doctor/patients/${patientId}/emr`, { headers }).then((res) => res.data);
         },
-        
+
         getPatientProfile: (patientId) => {
-            return api.get(`/doctor/patients/${patientId}`, { headers });
+            return api.get(`/doctor/patients/${patientId}`, { headers }).then((res) => res.data);
         },
-        
-        // ✅ ADD THIS - Update clinical records (doctor only)
+
+        // Update clinical records (doctor only)
         updateClinicalRecords: (patientId, data) => {
-            return api.put(`/doctor/patients/${patientId}/clinical-records`, data, { headers });
+            return api.put(`/doctor/patients/${patientId}/clinical-records`, data, { headers }).then((res) => res.data);
         },
-        
+
         // ----- Documents -----
-        // ✅ ADD THIS - Get patient documents
         getDocuments: (patientId) => {
-            return api.get(`/doctor/patients/${patientId}/documents`, { headers });
+            return api.get(`/doctor/patients/${patientId}/documents`, { headers }).then((res) => res.data);
         },
-        
-        // ✅ ADD THIS - Upload document
+
         uploadDocument: (patientId, formData) => {
-            return api.post(`/doctor/patients/${patientId}/documents`, formData, {
-                headers: {
-                    ...headers,
-                    'Content-Type': 'multipart/form-data'
-                }
-            });
+            return api
+                .post(`/doctor/patients/${patientId}/documents`, formData, { headers: uploadHeaders })
+                .then((res) => res.data);
         },
-        
-        // ✅ ADD THIS - Delete document
+
         deleteDocument: (patientId, documentId) => {
-            return api.delete(`/doctor/patients/${patientId}/documents/${documentId}`, { headers });
+            return api
+                .delete(`/doctor/patients/${patientId}/documents/${documentId}`, { headers })
+                .then((res) => res.data);
         },
-        
+
         // ----- Diagnoses -----
         addDiagnosis: (patientId, payload) => {
             const mappedPayload = {
@@ -56,9 +80,9 @@ export const createDoctorPhase8Api = (token) => {
                 diagnosed_date: payload.diagnosed_date || payload.diagnosed_at,
                 booking_id: payload.booking_id,
             };
-            return api.post(`/doctor/patients/${patientId}/diagnoses`, mappedPayload, { headers });
+            return api.post(`/doctor/patients/${patientId}/diagnoses`, mappedPayload, { headers }).then((res) => res.data);
         },
-        
+
         // ----- Lab Results -----
         addLabResult: (patientId, payload) => {
             const mappedPayload = {
@@ -71,9 +95,9 @@ export const createDoctorPhase8Api = (token) => {
                 notes: payload.notes,
                 booking_id: payload.booking_id,
             };
-            return api.post(`/doctor/patients/${patientId}/lab-results`, mappedPayload, { headers });
+            return api.post(`/doctor/patients/${patientId}/lab-results`, mappedPayload, { headers }).then((res) => res.data);
         },
-        
+
         // ----- Radiology -----
         addRadiologyResult: (patientId, payload) => {
             const mappedPayload = {
@@ -85,7 +109,7 @@ export const createDoctorPhase8Api = (token) => {
                 notes: payload.notes,
                 booking_id: payload.booking_id,
             };
-            return api.post(`/doctor/patients/${patientId}/radiology-results`, mappedPayload, { headers });
+            return api.post(`/doctor/patients/${patientId}/radiology-results`, mappedPayload, { headers }).then((res) => res.data);
         },
 
         // ----- Prescriptions -----
@@ -98,7 +122,7 @@ export const createDoctorPhase8Api = (token) => {
                 notes: payload.notes,
                 booking_id: payload.booking_id,
             };
-            return api.post(`/doctor/patients/${patientId}/prescriptions`, mappedPayload, { headers });
+            return api.post(`/doctor/patients/${patientId}/prescriptions`, mappedPayload, { headers }).then((res) => res.data);
         },
     };
 };

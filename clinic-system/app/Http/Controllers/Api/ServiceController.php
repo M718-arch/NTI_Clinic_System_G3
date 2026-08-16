@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Models\Service;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\Controller;
 
 class ServiceController extends Controller
 {
@@ -29,8 +30,10 @@ class ServiceController extends Controller
             'is_active' => 'sometimes|boolean',
         ]);
 
+        $doctor = auth()->user()->doctor;
+
         Service::create([
-            'doctor_id' => auth()->id(),
+            'doctor_id' => $doctor->id, // Doctor's own id, not user id
             'name' => $request->name,
             'description' => $request->description,
             'price' => $request->price ?? 0,
@@ -48,7 +51,7 @@ class ServiceController extends Controller
     {
         try {
             $doctor = auth()->user()->doctor;
-            
+
             if (!$doctor) {
                 if (request()->wantsJson()) {
                     return response()->json([
@@ -119,7 +122,7 @@ class ServiceController extends Controller
     {
         try {
             $doctor = auth()->user()->doctor;
-            
+
             if (!$doctor) {
                 return response()->json([
                     'message' => 'Doctor profile not found'
@@ -164,7 +167,7 @@ class ServiceController extends Controller
     {
         try {
             $doctor = auth()->user()->doctor;
-            
+
             if (!$doctor || $service->doctor_id !== $doctor->id) {
                 return response()->json([
                     'message' => 'Unauthorized'
@@ -200,7 +203,9 @@ class ServiceController extends Controller
      */
     public function destroy(Service $service)
     {
-        if ($service->doctor_id !== auth()->id()) {
+        $doctor = auth()->user()->doctor;
+
+        if (!$doctor || $service->doctor_id !== $doctor->id) {
             abort(403);
         }
 
@@ -219,7 +224,7 @@ class ServiceController extends Controller
     {
         try {
             $doctor = auth()->user()->doctor;
-            
+
             if (!$doctor || $service->doctor_id !== $doctor->id) {
                 return response()->json([
                     'message' => 'Unauthorized'
@@ -252,7 +257,9 @@ class ServiceController extends Controller
      */
     public function edit(Service $service)
     {
-        if ($service->doctor_id != auth()->id()) {
+        $doctor = auth()->user()->doctor;
+
+        if (!$doctor || $service->doctor_id !== $doctor->id) {
             abort(403);
         }
         return view('services.edit', compact('service'));
@@ -263,7 +270,9 @@ class ServiceController extends Controller
      */
     public function update(Request $request, Service $service)
     {
-        if ($service->doctor_id != auth()->id()) {
+        $doctor = auth()->user()->doctor;
+
+        if (!$doctor || $service->doctor_id !== $doctor->id) {
             abort(403);
         }
 
@@ -286,7 +295,7 @@ class ServiceController extends Controller
     {
         try {
             $service->load(['doctor', 'doctor.user']);
-            
+
             return response()->json([
                 'id' => $service->id,
                 'name' => $service->name,

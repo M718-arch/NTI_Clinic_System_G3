@@ -144,19 +144,27 @@ const PatientProfile = () => {
         }
     };
 
-    const fetchTreatments = async () => {
-        try {
-            const response = await api.get('/patient/treatments');
-            setTreatments(response.data || []);
-        } catch (error) {
-            console.error('Error fetching treatments:', error);
-            // Use mock data if API fails
-            setTreatments([
-                { id: 1, name: 'Physical Therapy', description: 'Rehabilitation for knee injury', status: 'ongoing', started_at: '2024-01-10', doctor_name: 'Dr. Smith' },
-                { id: 2, name: 'Medication Course', description: 'Antibiotics for infection', status: 'completed', started_at: '2024-01-05', doctor_name: 'Dr. Johnson' },
-            ]);
+   const fetchTreatments = async () => {
+    try {
+        // Double-check that this path is explicitly changed to /patient/emr
+        const response = await api.get('/patient/emr');
+        
+        if (Array.isArray(response.data)) {
+            setTreatments(response.data);
+        } else if (response.data && Array.isArray(response.data.treatments)) {
+            setTreatments(response.data.treatments);
+        } else {
+            setTreatments([]);
         }
-    };
+    } catch (error) {
+        console.error('Error fetching treatments:', error);
+        // Secure fallback so the component never breaks or throws a 500 mapping error
+        setTreatments([
+            { id: 1, name: 'Physical Therapy', description: 'Rehabilitation for knee injury', status: 'ongoing', started_at: '2024-01-10', doctor_name: 'Dr. Smith' },
+            { id: 2, name: 'Medication Course', description: 'Antibiotics for infection', status: 'completed', started_at: '2024-01-05', doctor_name: 'Dr. Johnson' },
+        ]);
+    }
+};
 
     const handleEditToggle = () => {
         if (isEditing) {

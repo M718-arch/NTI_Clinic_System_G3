@@ -297,7 +297,7 @@ export const Overview = () => {
                         />
                         <div>
                             <h2 className="text-3xl md:text-4xl font-headline font-bold text-[#252f43] tracking-tight mb-2">
-                                Welcome back, <span className="text-[#006382]">Dr. {user?.name?.split(' ')[0] || 'Marcus'}!</span>
+                                Welcome back, <span className="text-[#006382]">Dr. {user?.name?.split(' ')[1] || 'Marcus'}!</span>
                             </h2>
                             <p className="text-[#525b72] text-body-md">Here's an overview of your schedule and patient metrics for today.</p>
                         </div>

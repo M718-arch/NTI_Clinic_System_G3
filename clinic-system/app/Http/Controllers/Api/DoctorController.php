@@ -72,6 +72,32 @@ class DoctorController extends Controller
             return response()->json(['message' => 'Error updating profile'], 500);
         }
     }
+    public function updateClinicalRecords(Request $request, Patient $patient)
+{
+    try {
+        $validated = $request->validate([
+            'allergies' => 'nullable|string|max:500',
+            'chronic_diseases' => 'nullable|string|max:500',
+            'current_medications' => 'nullable|string|max:500',
+            'medical_history' => 'nullable|string|max:1000',
+            'diagnoses' => 'nullable|string|max:1000',
+            'family_history' => 'nullable|string|max:1000',
+            'past_surgeries' => 'nullable|string|max:1000',
+        ]);
+
+        $patient->update($validated);
+
+        return response()->json([
+            'message' => 'Clinical records updated successfully',
+            'data' => $patient->fresh()
+        ]);
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        return response()->json(['message' => 'Validation failed', 'errors' => $e->errors()], 422);
+    } catch (\Exception $e) {
+        Log::error('Update clinical records error: ' . $e->getMessage());
+        return response()->json(['message' => 'Error updating clinical records'], 500);
+    }
+}
 
     /**
      * Update password
@@ -288,6 +314,73 @@ class DoctorController extends Controller
             return response()->json(['message' => 'Error fetching stats'], 500);
         }
     }
+    public function getDocuments(Patient $patient)
+{
+    try {
+        $documents = \App\Models\PatientDocument::where('patient_id', $patient->id)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json($documents);
+    } catch (\Exception $e) {
+        Log::error('Get documents error: ' . $e->getMessage());
+        return response()->json(['message' => 'Error fetching documents'], 500);
+    }
+}
+
+public function uploadDocument(Request $request, Patient $patient)
+{
+    try {
+        $request->validate([
+            'document' => 'required|file|max:10240',
+            'name' => 'nullable|string|max:255',
+        ]);
+
+        $doctor = $request->user()->doctor;
+        $uploadedFile = $request->file('document');
+        \Log::info('Upload debug', [
+    'has_file' => $request->hasFile('document'),
+    'all_files' => $request->allFiles(),
+    'content_length_header' => $request->header('Content-Length'),
+    'php_upload_max' => ini_get('upload_max_filesize'),
+    'php_post_max' => ini_get('post_max_size'),
+]);
+        $path = $uploadedFile->store('patient-documents/' . $patient->id, 'public');
+
+        $document = \App\Models\PatientDocument::create([
+            'patient_id' => $patient->id,
+            'doctor_id' => $doctor?->id,
+            'name' => $request->name ?? $uploadedFile->getClientOriginalName(),
+            'path' => $path,
+            'type' => $uploadedFile->getClientMimeType(),
+            'size' => $uploadedFile->getSize(),
+        ]);
+
+        return response()->json([
+            'message' => 'Document uploaded successfully',
+            'data' => $document
+        ], 201);
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        return response()->json(['message' => 'Validation failed', 'errors' => $e->errors()], 422);
+    } catch (\Exception $e) {
+        Log::error('Upload document error: ' . $e->getMessage());
+        return response()->json(['message' => 'Error uploading document'], 500);
+    }
+}
+
+public function deleteDocument(Patient $patient, $document)
+{
+    try {
+        $doc = \App\Models\PatientDocument::where('patient_id', $patient->id)->findOrFail($document);
+        Storage::disk('public')->delete($doc->path);
+        $doc->delete();
+
+        return response()->json(['message' => 'Document deleted successfully']);
+    } catch (\Exception $e) {
+        Log::error('Delete document error: ' . $e->getMessage());
+        return response()->json(['message' => 'Error deleting document'], 500);
+    }
+}
 
     /**
      * Get patients list for doctor
@@ -324,6 +417,7 @@ class DoctorController extends Controller
                     'email' => $patient->user?->email,
                     'phone' => $patient->phone,
                     'photo' => $patient->photo,
+                    'user_id' => $patient->user_id,
                     'photo_url' => $patient->photo_url,
                     'date_of_birth' => $patient->date_of_birth,
                     'gender' => $patient->gender,

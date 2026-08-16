@@ -182,16 +182,23 @@ export const Messages = ({ updateUnreadCount }) => {
     };
 
     const fetchPatients = async () => {
-        try {
-            setLoadingPatients(true);
-            const response = await api.get('/doctor/patients');
-            setPatients(response.data);
-        } catch (error) {
-            console.error('Error fetching patients:', error);
-        } finally {
-            setLoadingPatients(false);
+    try {
+        setLoadingPatients(true);
+        const response = await api.get('/doctor/patients');
+        console.log('Patients data:', response.data);
+        // Log the first patient to see the structure
+        if (response.data.length > 0) {
+            console.log('First patient:', response.data[0]);
+            console.log('Patient id:', response.data[0].id);
+            console.log('Patient user_id:', response.data[0].user_id);
         }
-    };
+        setPatients(response.data);
+    } catch (error) {
+        console.error('Error fetching patients:', error);
+    } finally {
+        setLoadingPatients(false);
+    }
+};
 
     const fetchMessages = async (conversationId) => {
         try {
@@ -219,84 +226,109 @@ export const Messages = ({ updateUnreadCount }) => {
         setShowChatOnMobile(true);
     };
 
-    const startNewConversation = async (patient) => {
-        const receiverId = patient.user_id || patient.id;
+   const startNewConversation = async (patient) => {
+    // Use user_id instead of id
+    const receiverId = patient.user_id; // Changed from patient.id
+    
+    // If user_id is not available, fallback to id
+    // const receiverId = patient.user_id || patient.id;
 
-        try {
-            await api.post('/messages/send', {
-                receiver_id: receiverId,
-                content: `Hello ${patient.name}, how can I help you today?`,
-            });
+    try {
+        const response = await api.post('/messages/send', {
+            receiver_id: receiverId,
+            content: `Hello ${patient.name}, how can I help you today?`,
+        });
 
-            setShowNewChat(false);
-            setPatientSearch('');
+        console.log('API Response:', response.data);
 
-            const response = await api.get('/messages/conversations');
-            setConversations(response.data);
+        setShowNewChat(false);
+        setPatientSearch('');
 
-            const newConv = response.data.find(c => c.other_user?.id === receiverId);
-            if (newConv) {
-                openConversation(newConv);
-            }
+        const convResponse = await api.get('/messages/conversations');
+        setConversations(convResponse.data);
 
-            notify('success', 'Conversation started.');
-            if (updateUnreadCount) updateUnreadCount();
-        } catch (error) {
-            console.error('Error starting conversation:', error);
-            notify('error', error.response?.data?.message || 'Could not start the conversation. Please try again.');
+        const newConv = convResponse.data.find(c => c.other_user?.id === receiverId);
+        if (newConv) {
+            openConversation(newConv);
         }
-    };
 
+        notify('success', 'Conversation started.');
+        if (updateUnreadCount) updateUnreadCount();
+    } catch (error) {
+        console.error('Error:', error.response?.data);
+        let errorMessage = 'Could not start the conversation. Please try again.';
+        if (error.response?.data?.message) {
+            errorMessage = error.response.data.message;
+        }
+        if (error.response?.data?.errors) {
+            const firstError = Object.values(error.response.data.errors)[0]?.[0];
+            if (firstError) errorMessage = firstError;
+        }
+        notify('error', errorMessage);
+    }
+};
     const sendMessage = async () => {
-        if (!newMessage.trim() || !activeConversation) return;
+    if (!newMessage.trim() || !activeConversation) return;
 
-        const messageText = newMessage.trim();
-        setNewMessage('');
-        setSending(true);
+    const messageText = newMessage.trim();
+    setNewMessage('');
+    setSending(true);
 
-        const tempId = Date.now();
-        const tempMessage = {
-            id: tempId,
-            content: messageText,
-            sender_id: user?.id,
-            receiver_id: activeConversation.other_user?.id,
-            created_at: new Date().toISOString(),
-            is_read: false,
-            is_sent: true,
-            is_temp: true,
-        };
-        setMessages(prev => [...prev, tempMessage]);
-        scrollToBottom();
-
-        try {
-            const response = await api.post('/messages/send', {
-                receiver_id: activeConversation.other_user?.id,
-                content: messageText,
-                conversation_id: activeConversation.id,
-            });
-
-            setMessages(prev =>
-                prev.map(m => (m.id === tempId ? { ...response.data.data, is_sent: true } : m))
-            );
-
-            setConversations(prev =>
-                prev.map(c =>
-                    c.id === activeConversation.id
-                        ? { ...c, last_message: messageText, last_message_time: new Date().toISOString() }
-                        : c
-                )
-            );
-        } catch (error) {
-            console.error('Error sending message:', error);
-            setMessages(prev =>
-                prev.map(m => (m.id === tempId ? { ...m, is_sent: false, error: true } : m))
-            );
-            notify('error', 'Message failed to send.');
-        } finally {
-            setSending(false);
-        }
+    const tempId = Date.now();
+    const tempMessage = {
+        id: tempId,
+        content: messageText,
+        sender_id: user?.id,
+        receiver_id: activeConversation.other_user?.id,
+        created_at: new Date().toISOString(),
+        is_read: false,
+        is_sent: true,
+        is_temp: true,
     };
+    setMessages(prev => [...prev, tempMessage]);
+    scrollToBottom();
 
+    try {
+        const response = await api.post('/messages/send', {
+            receiver_id: activeConversation.other_user?.id,
+            content: messageText,
+            conversation_id: activeConversation.id,
+        });
+
+        console.log('Send message response:', response.data);
+
+        setMessages(prev =>
+            prev.map(m => (m.id === tempId ? { ...response.data.data, is_sent: true } : m))
+        );
+
+        setConversations(prev =>
+            prev.map(c =>
+                c.id === activeConversation.id
+                    ? { ...c, last_message: messageText, last_message_time: new Date().toISOString() }
+                    : c
+            )
+        );
+    } catch (error) {
+        console.error('=== SEND MESSAGE ERROR ===');
+        console.error('Error details:', error.response?.data);
+        console.error('Validation errors:', error.response?.data?.errors);
+        
+        setMessages(prev =>
+            prev.map(m => (m.id === tempId ? { ...m, is_sent: false, error: true } : m))
+        );
+        
+        let errorMessage = 'Message failed to send.';
+        if (error.response?.data?.errors) {
+            const firstError = Object.values(error.response.data.errors)[0]?.[0];
+            if (firstError) errorMessage = firstError;
+        } else if (error.response?.data?.message) {
+            errorMessage = error.response.data.message;
+        }
+        notify('error', errorMessage);
+    } finally {
+        setSending(false);
+    }
+};
     const handleKeyPress = (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
@@ -476,8 +508,8 @@ export const Messages = ({ updateUnreadCount }) => {
                                                 )}
                                             </div>
                                             <p className={`text-xs truncate ${isActive ? 'text-[#191c1e]' : 'text-[#6b7280]'}`}>
-                                                {conv.last_message || 'No messages yet'}
-                                            </p>
+    {typeof conv.last_message === 'string' ? conv.last_message : 'No messages yet'}
+</p>
                                         </div>
                                         {conv.unread_count > 0 && (
                                             <div className="w-2 h-2 bg-[#005EB8] rounded-full mt-1.5 shrink-0 shadow-[0_0_8px_rgba(0,94,184,0.5)]"></div>

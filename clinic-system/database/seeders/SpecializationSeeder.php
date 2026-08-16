@@ -1,15 +1,37 @@
 <?php
+// database/seeders/SpecializationSeeder.php
+
 namespace Database\Seeders;
-use App\Models\Specialization;
+
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
+
 class SpecializationSeeder extends Seeder
 {
-    public function run(): void
+    public function run()
     {
-        Specialization::factory()
+        $specializations = [
+            ['id' => 1, 'name' => 'Cardiology'],
+            ['id' => 2, 'name' => 'Neurology'],
+            ['id' => 3, 'name' => 'Pediatrics'],
+            ['id' => 4, 'name' => 'Orthopedics'],
+            ['id' => 5, 'name' => 'Dermatology'],
+            ['id' => 6, 'name' => 'Ophthalmology'],
+            ['id' => 7, 'name' => 'ENT'],
+            ['id' => 8, 'name' => 'Urology'],
+        ];
 
-            ->count(8)
+        foreach ($specializations as $spec) {
+            DB::table('specializations')->updateOrInsert(
+                ['id' => $spec['id']],
+                [
+                    'name' => $spec['name'],
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]
+            );
+        }
 
-            ->create();
+        $this->command->info('✅ Specializations seeded successfully!');
     }
 }

@@ -121,8 +121,8 @@ export const SettingsPage = () => {
         specialization_id: data.specialization_id || '',
         specialization: data.specialization || null,
         status: data.status ?? true,
-        image: data.image || null,
-        image_url: data.image_url || null,
+        image: data.image || data.photo || null,
+        image_url: data.image_url || data.photo_url || null,
       }));
       setImageError(false);
       
@@ -164,7 +164,6 @@ export const SettingsPage = () => {
     }
   };
 
-  // ADD THIS FUNCTION - Save profile changes
   const handleSave = async () => {
     setSaving(true);
     setMessage({ type: '', text: '' });
@@ -240,7 +239,6 @@ export const SettingsPage = () => {
     }
   };
 
-  // ADD THIS FUNCTION - Update password
   const handlePasswordUpdate = async () => {
     setSaving(true);
     setMessage({ type: '', text: '' });
@@ -325,15 +323,20 @@ export const SettingsPage = () => {
       });
       console.log('Upload response:', response.data);
       
+      // Update profile with the new photo URL
+      const photoUrl = response.data.photo_url || response.data.image_url || response.data.url;
+      const imagePath = response.data.image_path || response.data.path || response.data.image;
+      
       setProfile(prev => ({
         ...prev,
-        image: response.data.image_path || response.data.image,
-        image_url: response.data.image_url,
+        image: imagePath || photoUrl,
+        image_url: photoUrl,
       }));
       
       setMessage({ type: 'success', text: 'Profile photo updated!' });
       setTimeout(() => setMessage({ type: '', text: '' }), 3000);
       
+      // Re-fetch profile to get updated data
       await fetchProfile();
     } catch (error) {
       console.error('Error uploading photo:', error);
@@ -363,28 +366,60 @@ export const SettingsPage = () => {
     }
   };
 
+  // FIXED: Get photo URL function
   const getPhotoUrl = () => {
-    if (!profile?.image_url) return null;
-    
-    let url = profile.image_url;
-    
-    if (url.startsWith('http://') || url.startsWith('https://')) {
-      return url;
-    }
-    
-    if (url.startsWith('/storage/')) {
-      return `${window.location.origin}${url}`;
-    }
-    
-    if (url.startsWith('doctor-images/')) {
+    // First priority: use image_url from profile
+    if (profile?.image_url) {
+      let url = profile.image_url;
+      
+      // If it's already a full URL, return it
+      if (url.startsWith('http://') || url.startsWith('https://')) {
+        return url;
+      }
+      
+      // If it starts with /storage/, prepend base URL
+      if (url.startsWith('/storage/')) {
+        return `${window.location.origin}${url}`;
+      }
+      
+      // If it starts with doctor-images/, prepend base URL
+      if (url.startsWith('doctor-images/')) {
+        return `${window.location.origin}/storage/${url}`;
+      }
+      
+      // Default: assume it's a path under storage
       return `${window.location.origin}/storage/${url}`;
     }
     
-    if (profile.image && !profile.image.startsWith('http')) {
-      return `${window.location.origin}/storage/${profile.image}`;
+    // Second priority: use image field
+    if (profile?.image) {
+      let url = profile.image;
+      
+      if (url.startsWith('http://') || url.startsWith('https://')) {
+        return url;
+      }
+      
+      if (url.startsWith('/storage/')) {
+        return `${window.location.origin}${url}`;
+      }
+      
+      if (url.startsWith('doctor-images/')) {
+        return `${window.location.origin}/storage/${url}`;
+      }
+      
+      return `${window.location.origin}/storage/${url}`;
     }
     
-    return url;
+    // Third priority: check user object
+    if (user?.photo || user?.avatar) {
+      const url = user.photo || user.avatar;
+      if (url.startsWith('http://') || url.startsWith('https://')) {
+        return url;
+      }
+      return `${window.location.origin}/storage/${url}`;
+    }
+    
+    return null;
   };
 
   const getDisplayName = () => {
@@ -398,23 +433,34 @@ export const SettingsPage = () => {
     console.error('Image failed to load:', getPhotoUrl());
     setImageError(true);
     
+    // Try a fallback URL
     if (profile.image) {
       const baseUrl = window.location.origin;
-      const fallbackUrl = `${baseUrl}/storage/${profile.image}`;
+      let fallbackUrl = profile.image;
+      
+      if (!fallbackUrl.startsWith('http')) {
+        fallbackUrl = `${baseUrl}/storage/${fallbackUrl}`;
+      }
+      
       e.target.src = fallbackUrl;
       
+      // If still fails, show initials
       setTimeout(() => {
         if (e.target.naturalWidth === 0) {
           e.target.style.display = 'none';
           const parent = e.target.parentElement;
           if (parent) {
+            // Remove any existing fallback
+            const existingFallback = parent.querySelector('.fallback-initials');
+            if (existingFallback) existingFallback.remove();
+            
             const initials = document.createElement('span');
-            initials.className = 'text-white text-2xl font-bold';
+            initials.className = 'fallback-initials text-white text-2xl font-bold';
             initials.textContent = (displayName?.charAt(0) || 'D').toUpperCase();
             parent.appendChild(initials);
           }
         }
-      }, 1000);
+      }, 2000);
     }
   };
 
@@ -431,6 +477,7 @@ export const SettingsPage = () => {
 
   const displayName = getDisplayName();
   const photoUrl = getPhotoUrl();
+  console.log('Photo URL:', photoUrl);
 
   return (
     <div className="flex-1 flex flex-col min-h-0">

@@ -16,8 +16,8 @@ const PatientServices = () => {
     const [expandedDoctor, setExpandedDoctor] = useState(null);
     const [doctorServices, setDoctorServices] = useState({});
     const [loadingServices, setLoadingServices] = useState({});
+    const [filteredDoctors, setFilteredDoctors] = useState([]);
     
-    // Booking Modal State
     const [showBookingModal, setShowBookingModal] = useState(false);
     const [selectedService, setSelectedService] = useState(null);
     const [selectedDoctor, setSelectedDoctor] = useState(null);
@@ -37,9 +37,9 @@ const PatientServices = () => {
             console.log('Doctors data:', response.data);
             setDoctors(response.data);
             
-            // Extract unique specialties
-            const uniqueSpecialties = [...new Set(response.data.map(d => d.specialization).filter(Boolean))];
+            const uniqueSpecialties = [...new Set(response.data.map(d => d.specialization?.name).filter(Boolean))];
             setSpecialties(uniqueSpecialties);
+            setFilteredDoctors(response.data);
         } catch (error) {
             console.error('Error fetching doctors:', error);
             setMessage({ type: 'error', text: 'Failed to load doctors' });
@@ -58,14 +58,10 @@ const PatientServices = () => {
         
         try {
             const response = await api.get(`/patient/doctors/${doctorId}/services`);
-            setDoctorServices(prev => ({
-                ...prev,
-                [doctorId]: response.data.services || []
-            }));
-            setDoctorServices(prev => ({
-                ...prev,
-                [`${doctorId}_doctor`]: response.data.doctor
-            }));
+setDoctorServices(prev => ({
+    ...prev,
+    [doctorId]: response.data.services || []   // expects response.data.services
+}));
             setExpandedDoctor(doctorId);
         } catch (error) {
             console.error('Error fetching doctor services:', error);
@@ -105,7 +101,6 @@ const PatientServices = () => {
         setSubmitting(true);
         
         try {
-            // Use appointment_date and appointment_time for backend
             const response = await api.post('/patient/bookings', {
                 service_id: selectedService.id,
                 appointment_date: bookingDate,
@@ -118,7 +113,6 @@ const PatientServices = () => {
             setSelectedService(null);
             setSelectedDoctor(null);
             
-            // Reset form
             setBookingDate('');
             setBookingTime('');
             setBookingNotes('');
@@ -139,7 +133,6 @@ const PatientServices = () => {
         }
     };
 
-    // Filter and sort logic
     useEffect(() => {
         let results = doctors;
 
@@ -147,14 +140,14 @@ const PatientServices = () => {
             const term = searchTerm.toLowerCase();
             results = results.filter(d => 
                 d.name?.toLowerCase().includes(term) ||
-                d.specialization?.toLowerCase().includes(term) ||
+                d.specialization?.name?.toLowerCase().includes(term) ||
                 d.clinic_name?.toLowerCase().includes(term) ||
                 d.bio?.toLowerCase().includes(term)
             );
         }
 
         if (selectedSpecialty !== 'all') {
-            results = results.filter(d => d.specialization === selectedSpecialty);
+            results = results.filter(d => d.specialization?.name === selectedSpecialty);
         }
 
         switch(sortBy) {
@@ -173,8 +166,6 @@ const PatientServices = () => {
 
         setFilteredDoctors(results);
     }, [searchTerm, selectedSpecialty, sortBy, doctors]);
-
-    const [filteredDoctors, setFilteredDoctors] = useState([]);
 
     const clearFilters = () => {
         setSearchTerm('');
@@ -254,7 +245,6 @@ const PatientServices = () => {
                     </div>
                 </div>
 
-                {/* Filter Options */}
                 {showFilters && (
                     <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
@@ -316,20 +306,23 @@ const PatientServices = () => {
                             key={doctor.id} 
                             className="bg-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition overflow-hidden"
                         >
-                            {/* Doctor Header - Clickable to expand */}
                             <div 
                                 className="p-5 cursor-pointer hover:bg-slate-50/50 transition"
                                 onClick={() => toggleDoctor(doctor.id)}
                             >
                                 <div className="flex items-start justify-between">
                                     <div className="flex items-start gap-4">
-                                        <div className="w-14 h-14 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 flex items-center justify-center text-white text-xl font-bold shrink-0">
-                                            {doctor.name?.charAt(0) || 'D'}
-                                        </div>
+                                        <div className="w-14 h-14 rounded-full overflow-hidden bg-gradient-to-r from-blue-500 to-indigo-500 flex items-center justify-center text-white text-xl font-bold shrink-0">
+    {doctor.photo_url ? (
+        <img src={doctor.photo_url} alt={doctor.name} className="w-full h-full object-cover" />
+    ) : (
+        doctor.name?.charAt(0) || 'D'
+    )}
+</div>
                                         <div>
                                             <h3 className="text-lg font-semibold text-slate-800">{doctor.name}</h3>
                                             <p className="text-sm text-blue-600 font-medium">
-                                                {doctor.specialization || 'General'}
+                                                {doctor.specialization?.name || 'General'}
                                             </p>
                                             {doctor.clinic_name && (
                                                 <p className="text-sm text-slate-500">{doctor.clinic_name}</p>
@@ -356,7 +349,6 @@ const PatientServices = () => {
                                 </div>
                             </div>
 
-                            {/* Expanded Services */}
                             {expandedDoctor === doctor.id && (
                                 <div className="px-5 pb-5 pt-2 border-t border-slate-100">
                                     {loadingServices[doctor.id] ? (
@@ -369,7 +361,8 @@ const PatientServices = () => {
                                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                                             {(doctorServices[doctor.id] || []).map((service) => (
                                                 <div key={service.id} className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 transition">
-                                                    <h4 className="font-medium text-slate-800">{service.name}</h4>
+                                                    {/* ✅ FIXED: Use service.name, NOT service */}
+                                                    <h4 className="font-medium text-slate-800">{service.name || 'Service'}</h4>
                                                     {service.description && (
                                                         <p className="text-xs text-slate-500 mt-1">{service.description}</p>
                                                     )}
@@ -381,7 +374,7 @@ const PatientServices = () => {
                                                             </span>
                                                             <span className="flex items-center gap-1 text-blue-600 font-medium">
                                                                 <DollarSign size={14} />
-                                                                {service.formatted_price || '$0.00'}
+                                                                {service.formatted_price || `$${service.price || '0.00'}`}
                                                             </span>
                                                         </div>
                                                         <button
@@ -405,7 +398,6 @@ const PatientServices = () => {
                 </div>
             )}
 
-            {/* Footer */}
             {filteredDoctors.length > 0 && (
                 <div className="mt-6 text-sm text-slate-400 text-center">
                     Showing {filteredDoctors.length} of {doctors.length} doctors
@@ -432,11 +424,12 @@ const PatientServices = () => {
 
                         <div className="space-y-4">
                             <div>
+                                {/* ✅ FIXED: Use selectedService.name, NOT selectedService */}
                                 <p className="text-sm text-slate-500">Service</p>
                                 <p className="font-medium text-slate-800">{selectedService.name}</p>
                                 <p className="text-sm text-slate-500">Dr. {selectedDoctor.name}</p>
                                 <p className="text-sm text-blue-600 font-medium">
-                                    {selectedService.formatted_price} · {selectedService.duration || 30} min
+                                    {selectedService.formatted_price || `$${selectedService.price || '0.00'}`} · {selectedService.duration || 30} min
                                 </p>
                             </div>
 

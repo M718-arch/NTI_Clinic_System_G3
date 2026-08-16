@@ -21,7 +21,6 @@ use App\Models\LabResult;
 use App\Models\RadiologyResult;
 use App\Models\Prescription;
 
-
 class PatientController extends Controller
 {
     // ============================================================
@@ -64,539 +63,229 @@ class PatientController extends Controller
             'created_at' => $user->created_at,
         ]);
     }
-    /**
- * List the authenticated patient's invoices — doubles as their payment
- * history view (each row already carries status + date).
- */
-public function invoices(Request $request)
-{
-    try {
-        $patient = Patient::where('user_id', Auth::id())->first();
-
-        if (!$patient) {
-            return response()->json([]);
-        }
-
-        $invoices = Invoice::where('patient_id', $patient->id)
-            ->with(['doctor.user'])
-            ->orderBy('created_at', 'desc')
-            ->get()
-            ->map(function ($invoice) {
-                return [
-                    'id' => $invoice->id,
-                    'invoice_number' => $invoice->invoice_number,
-                    'doctor_name' => $invoice->doctor->full_name ?? ($invoice->doctor->user->name ?? null),
-                    'service_name' => $invoice->service_name,
-                    'amount' => $invoice->formatted_amount,
-                    'status' => $invoice->status,
-                    'date' => $invoice->created_at->format('M j, Y'),
-                    'paid_at' => $invoice->paid_at?->format('M j, Y'),
-                ];
-            });
-
-        return response()->json($invoices);
-
-    } catch (\Exception $e) {
-        \Log::error('Patient invoices fetch error: ' . $e->getMessage());
-        return response()->json([
-            'message' => 'Error fetching invoices',
-            'error' => $e->getMessage()
-        ], 500);
-    }
-}
-/**
- * Get the patient's complete EMR (Electronic Medical Record)
- * Includes: diagnoses, lab results, radiology results, and prescriptions
- */
-public function emr(Request $request)
-{
-    try {
-        $patient = Patient::where('user_id', Auth::id())->first();
-
-        if (!$patient) {
-            return response()->json(['message' => 'Patient not found'], 404);
-        }
-
-        // Get all EMR data for this patient
-        $diagnoses = Diagnosis::where('patient_id', $patient->id)
-            ->with(['doctor.user'])
-            ->orderBy('diagnosed_at', 'desc')
-            ->get();
-
-        $labResults = LabResult::where('patient_id', $patient->id)
-            ->with(['doctor.user'])
-            ->orderBy('created_at', 'desc')
-            ->get();
-
-        $radiologyResults = RadiologyResult::where('patient_id', $patient->id)
-            ->with(['doctor.user'])
-            ->orderBy('created_at', 'desc')
-            ->get();
-
-        $prescriptions = Prescription::where('patient_id', $patient->id)
-            ->with(['doctor.user'])
-            ->orderBy('created_at', 'desc')
-            ->get();
-
-        return response()->json([
-            'diagnoses' => $diagnoses->map(function ($d) {
-                return [
-                    'id' => $d->id,
-                    'condition' => $d->condition,
-                    'icd_code' => $d->icd_code,
-                    'diagnosed_at' => $d->diagnosed_at?->format('Y-m-d'),
-                    'notes' => $d->notes,
-                    'doctor_name' => $d->doctor->user->name ?? 'N/A',
-                ];
-            }),
-            'lab_results' => $labResults->map(function ($lab) {
-                return [
-                    'id' => $lab->id,
-                    'test_name' => $lab->test_name,
-                    'result' => $lab->result,
-                    'reference_range' => $lab->reference_range,
-                    'interpretation' => $lab->interpretation,
-                    'performed_at' => $lab->performed_at?->format('Y-m-d'),
-                    'file_path' => $lab->file_path,
-                    'doctor_name' => $lab->doctor->user->name ?? 'N/A',
-                ];
-            }),
-            'radiology_results' => $radiologyResults->map(function ($rad) {
-                return [
-                    'id' => $rad->id,
-                    'study_type' => $rad->study_type,
-                    'findings' => $rad->findings,
-                    'impression' => $rad->impression,
-                    'performed_at' => $rad->performed_at?->format('Y-m-d'),
-                    'file_path' => $rad->file_path,
-                    'doctor_name' => $rad->doctor->user->name ?? 'N/A',
-                ];
-            }),
-            'prescriptions' => $prescriptions->map(function ($p) {
-                return [
-                    'id' => $p->id,
-                    'medicine' => $p->medicine,
-                    'dose' => $p->dose,
-                    'frequency' => $p->frequency,
-                    'duration' => $p->duration,
-                    'notes' => $p->notes,
-                    'prescribed_at' => $p->created_at->format('Y-m-d'),
-                    'doctor_name' => $p->doctor->user->name ?? 'N/A',
-                ];
-            }),
-        ]);
-
-    } catch (\Exception $e) {
-        \Log::error('EMR fetch error: ' . $e->getMessage());
-        return response()->json([
-            'message' => 'Error fetching EMR data',
-            'error' => $e->getMessage()
-        ], 500);
-    }
-}
-
-/**
- * Get the patient's prescriptions (payment history-like view)
- */
-public function prescriptions(Request $request)
-{
-    try {
-        $patient = Patient::where('user_id', Auth::id())->first();
-
-        if (!$patient) {
-            return response()->json([]);
-        }
-
-        $prescriptions = Prescription::where('patient_id', $patient->id)
-            ->with(['doctor.user'])
-            ->orderBy('created_at', 'desc')
-            ->get()
-            ->map(function ($prescription) {
-                return [
-                    'id' => $prescription->id,
-                    'medicine' => $prescription->medicine,
-                    'dose' => $prescription->dose,
-                    'frequency' => $prescription->frequency,
-                    'duration' => $prescription->duration,
-                    'notes' => $prescription->notes,
-                    'prescribed_at' => $prescription->created_at->format('M j, Y'),
-                    'doctor_name' => $prescription->doctor->user->name ?? 'N/A',
-                ];
-            });
-
-        return response()->json($prescriptions);
-
-    } catch (\Exception $e) {
-        \Log::error('Prescriptions fetch error: ' . $e->getMessage());
-        return response()->json([
-            'message' => 'Error fetching prescriptions',
-            'error' => $e->getMessage()
-        ], 500);
-    }
-}
-
-/**
- * Get a single prescription detail
- */
-public function prescriptionDetail(Request $request, Prescription $prescription)
-{
-    try {
-        $patient = Patient::where('user_id', Auth::id())->first();
-
-        if (!$patient || $prescription->patient_id !== $patient->id) {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
-
-        $prescription->load(['doctor.user']);
-
-        return response()->json([
-            'id' => $prescription->id,
-            'medicine' => $prescription->medicine,
-            'dose' => $prescription->dose,
-            'frequency' => $prescription->frequency,
-            'duration' => $prescription->duration,
-            'notes' => $prescription->notes,
-            'prescribed_at' => $prescription->created_at->format('F j, Y'),
-            'doctor_name' => $prescription->doctor->user->name ?? 'N/A',
-            'doctor_id' => $prescription->doctor_id,
-            'patient_name' => $prescription->patient->user->name ?? 'N/A',
-        ]);
-
-    } catch (\Exception $e) {
-        \Log::error('Prescription detail error: ' . $e->getMessage());
-        return response()->json([
-            'message' => 'Error fetching prescription',
-            'error' => $e->getMessage()
-        ], 500);
-    }
-}
-
-/**
- * A single invoice's detail — the data a "View Invoice" /
- * "Download Invoice" screen renders (and the browser can print to PDF).
- */
-public function invoiceDetail(Request $request, Invoice $invoice)
-{
-    try {
-        $patient = Patient::where('user_id', Auth::id())->first();
-
-        if (!$patient || $invoice->patient_id !== $patient->id) {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
-
-        $invoice->load(['doctor.user', 'booking']);
-
-        return response()->json([
-            'invoice_number' => $invoice->invoice_number,
-            'date' => $invoice->created_at->format('M j, Y'),
-            'doctor_name' => $invoice->doctor->full_name ?? ($invoice->doctor->user->name ?? null),
-            'service_name' => $invoice->service_name,
-            'amount' => $invoice->formatted_amount,
-            'status' => $invoice->status,
-            'paid_at' => $invoice->paid_at?->format('M j, Y g:i A'),
-            'payment_method' => $invoice->payment_method,
-        ]);
-
-    } catch (\Exception $e) {
-        \Log::error('Patient invoice detail error: ' . $e->getMessage());
-        return response()->json([
-            'message' => 'Error fetching invoice',
-            'error' => $e->getMessage()
-        ], 500);
-    }
-}
 
     /**
-     * Get dashboard statistics for patient
+     * List the authenticated patient's invoices
      */
-    public function dashboardStats(Request $request)
+    public function invoices(Request $request)
     {
         try {
             $patient = Patient::where('user_id', Auth::id())->first();
 
             if (!$patient) {
-                return response()->json([
-                    'total' => 0,
-                    'pending' => 0,
-                    'confirmed' => 0,
-                    'completed' => 0,
-                    'cancelled' => 0,
-                ]);
+                return response()->json([]);
             }
 
-            $bookings = Booking::where('patient_id', $patient->id);
-
-            return response()->json([
-                'total' => $bookings->count(),
-                'pending' => (clone $bookings)->where('status', 'pending')->count(),
-                'confirmed' => (clone $bookings)->where('status', 'confirmed')->count(),
-                'completed' => (clone $bookings)->where('status', 'completed')->count(),
-                'cancelled' => (clone $bookings)->where('status', 'cancelled')->count(),
-            ]);
-
-        } catch (\Exception $e) {
-            \Log::error('Dashboard stats error: ' . $e->getMessage());
-            return response()->json([
-                'total' => 0,
-                'pending' => 0,
-                'confirmed' => 0,
-                'completed' => 0,
-                'cancelled' => 0,
-            ], 500);
-        }
-    }
-
-    /**
-     * Update patient profile
-     */
-    public function updateProfile(Request $request)
-    {
-        $user = Auth::user();
-        $patient = Patient::where('user_id', $user->id)->first();
-
-        $validated = $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'phone' => 'nullable|string|max:20',
-            'date_of_birth' => 'nullable|date',
-            'gender' => 'nullable|in:male,female,other',
-            'blood_group' => 'nullable|string|max:10',
-            'address' => 'nullable|string|max:500',
-            'emergency_contact_name' => 'nullable|string|max:255',
-            'emergency_contact_phone' => 'nullable|string|max:20',
-            'allergies' => 'nullable|string|max:500',
-            'chronic_diseases' => 'nullable|string|max:500',
-            'current_medications' => 'nullable|string|max:500',
-            'lifestyle_habits' => 'nullable|string|max:500',
-        ]);
-
-        if ($request->has('name')) {
-            $user->name = $request->name;
-            $user->save();
-        }
-        if ($request->has('phone')) {
-            $user->phone = $request->phone;
-            $user->save();
-        }
-
-        if ($patient) {
-            $patient->update($request->only([
-                'date_of_birth', 'gender', 'blood_group', 'address',
-                'emergency_contact_name', 'emergency_contact_phone',
-                'allergies', 'chronic_diseases',
-                'current_medications', 'lifestyle_habits'
-            ]));
-        }
-
-        return response()->json([
-            'message' => 'Profile updated successfully',
-            'profile' => $this->profile($request)->original
-        ]);
-    }
-
-    /**
-     * Update patient password
-     */
-    public function updatePassword(Request $request)
-    {
-        $request->validate([
-            'current_password' => 'required|string',
-            'new_password' => 'required|string|min:8|confirmed',
-        ]);
-
-        $user = Auth::user();
-
-        if (!Hash::check($request->current_password, $user->password)) {
-            return response()->json([
-                'message' => 'Current password is incorrect'
-            ], 400);
-        }
-
-        $user->update([
-            'password' => Hash::make($request->new_password),
-        ]);
-
-        return response()->json([
-            'message' => 'Password updated successfully'
-        ]);
-    }
-
-    /**
-     * Upload / replace the patient's profile photo.
-     */
-    public function uploadPhoto(Request $request)
-    {
-        try {
-            $request->validate([
-                'photo' => 'required|image|mimes:jpg,jpeg,png,webp|max:2048',
-            ]);
-
-            $user = Auth::user();
-            $patient = Patient::where('user_id', $user->id)->first();
-
-            if (!$patient) {
-                return response()->json(['message' => 'Patient profile not found'], 404);
-            }
-
-            if ($patient->photo) {
-                Storage::disk('public')->delete($patient->photo);
-            }
-
-            $path = $request->file('photo')->store('patient-photos', 'public');
-            $patient->update(['photo' => $path]);
-            $patient->refresh();
-
-            $photoUrl = asset('storage/' . $path);
-
-            return response()->json([
-                'message' => 'Photo uploaded successfully',
-                'photo_url' => $photoUrl,
-                'photo' => $path,
-            ], 200);
-
-        } catch (\Exception $e) {
-            \Log::error('Photo upload error: ' . $e->getMessage());
-            return response()->json([
-                'message' => 'Error uploading photo',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Remove the patient's profile photo
-     */
-    public function deletePhoto(Request $request)
-    {
-        try {
-            $user = Auth::user();
-            $patient = Patient::where('user_id', $user->id)->first();
-
-            if (!$patient) {
-                return response()->json(['message' => 'Patient profile not found'], 404);
-            }
-
-            if ($patient->photo) {
-                Storage::disk('public')->delete($patient->photo);
-                $patient->update(['photo' => null]);
-            }
-
-            return response()->json([
-                'message' => 'Profile photo removed successfully'
-            ]);
-
-        } catch (\Exception $e) {
-            \Log::error('Photo delete error: ' . $e->getMessage());
-            return response()->json([
-                'message' => 'Error deleting photo',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Get all doctors for patients
-     */
-    public function getDoctors(Request $request)
-    {
-        try {
-            $doctors = Doctor::with(['user', 'specialization'])
-                ->where('status', true)
-                ->get();
-
-            $formattedDoctors = $doctors->map(function($doctor) {
-                $name = $doctor->user->name ?? trim($doctor->first_name . ' ' . $doctor->last_name);
-
-                if ($doctor->image) {
-                    $imageUrl = asset('storage/' . $doctor->image);
-                } else {
-                    $imageUrl = 'https://ui-avatars.com/api/?name=' . urlencode($name) . '&background=random&size=128&bold=true';
-                }
-
-                return [
-                    'id' => $doctor->id,
-                    'user_id' => $doctor->user_id,
-                    'name' => $name,
-                    'first_name' => $doctor->first_name,
-                    'last_name' => $doctor->last_name,
-                    'email' => $doctor->email ?? $doctor->user->email,
-                    'phone' => $doctor->phone,
-                    'specialization' => $doctor->specialization ? $doctor->specialization->name : 'General',
-                    'specialization_id' => $doctor->specialization_id,
-                    'experience_years' => $doctor->experience_years,
-                    'consultation_fee' => $doctor->consultation_fee,
-                    'clinic_name' => $doctor->clinic_name,
-                    'branch' => $doctor->branch,
-                    'address' => $doctor->address,
-                    'bio' => $doctor->bio,
-                    'image' => $doctor->image,
-                    'image_url' => $imageUrl,
-                    'avatar' => $imageUrl,
-                    'operating_hours' => $doctor->operating_hours,
-                    'services_count' => $doctor->services()->count(),
-                    'is_available' => $doctor->status ?? true,
-                ];
-            });
-
-            return response()->json($formattedDoctors);
-
-        } catch (\Exception $e) {
-            \Log::error('Get doctors error: ' . $e->getMessage());
-            return response()->json([
-                'message' => 'Error fetching doctors',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Get a specific doctor's services
-     */
-    public function getDoctorServices(Request $request, $doctorId)
-    {
-        try {
-            $doctor = Doctor::with(['user', 'specialization'])->find($doctorId);
-
-            if (!$doctor) {
-                return response()->json(['message' => 'Doctor not found'], 404);
-            }
-
-            $services = Service::where('doctor_id', $doctorId)
-                ->where('is_active', true)
+            $invoices = Invoice::where('patient_id', $patient->id)
+                ->with(['doctor.user'])
+                ->orderBy('created_at', 'desc')
                 ->get()
-                ->map(function($service) use ($doctor) {
+                ->map(function ($invoice) {
                     return [
-                        'id' => $service->id,
-                        'name' => $service->name,
-                        'description' => $service->description,
-                        'price' => $service->price,
-                        'formatted_price' => '$' . number_format($service->price, 2),
-                        'duration' => $service->duration,
-                        'doctor_id' => $service->doctor_id,
-                        'doctor_name' => $doctor->user->name ?? $doctor->first_name . ' ' . $doctor->last_name,
-                        'is_active' => $service->is_active,
+                        'id' => $invoice->id,
+                        'invoice_number' => $invoice->invoice_number,
+                        'doctor_name' => $invoice->doctor->full_name ?? ($invoice->doctor->user->name ?? null),
+                        'service_name' => $invoice->service_name,
+                        'amount' => $invoice->formatted_amount,
+                        'status' => $invoice->status,
+                        'date' => $invoice->created_at->format('M j, Y'),
+                        'paid_at' => $invoice->paid_at?->format('M j, Y'),
                     ];
                 });
 
-            return response()->json([
-                'doctor' => [
-                    'id' => $doctor->id,
-                    'name' => $doctor->user->name ?? $doctor->first_name . ' ' . $doctor->last_name,
-                    'specialization' => $doctor->specialization ? $doctor->specialization->name : 'General',
-                    'clinic_name' => $doctor->clinic_name,
-                    'address' => $doctor->address,
-                    'consultation_fee' => $doctor->consultation_fee,
-                ],
-                'services' => $services
-            ]);
+            return response()->json($invoices);
 
         } catch (\Exception $e) {
-            \Log::error('Get doctor services error: ' . $e->getMessage());
+            \Log::error('Patient invoices fetch error: ' . $e->getMessage());
             return response()->json([
-                'message' => 'Error fetching doctor services',
+                'message' => 'Error fetching invoices',
                 'error' => $e->getMessage()
             ], 500);
         }
     }
+
+    /**
+     * Get the patient's complete EMR (Electronic Medical Record)
+     */
+    public function emr(Request $request)
+    {
+        try {
+            $patient = Patient::where('user_id', Auth::id())->first();
+
+            if (!$patient) {
+                return response()->json(['message' => 'Patient not found'], 404);
+            }
+
+            $diagnoses = Diagnosis::where('patient_id', $patient->id)
+                ->orderBy('diagnosed_date', 'desc')
+                ->get();
+
+            $labResults = LabResult::where('patient_id', $patient->id)
+                ->with(['doctor.user'])
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            $radiologyResults = RadiologyResult::where('patient_id', $patient->id)
+                ->with(['doctor.user'])
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            $prescriptions = Prescription::where('patient_id', $patient->id)
+                ->with(['doctor.user'])
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            return response()->json([
+                'diagnoses' => $diagnoses->map(function ($d) {
+                    return [
+                        'id' => $d->id,
+                        'condition' => $d->condition ?? $d->title ?? 'N/A',
+                        'icd_code' => $d->icd_code ?? null,
+                        'diagnosed_at' => $d->diagnosed_date,
+                        'notes' => $d->notes ?? $d->description ?? null,
+                        'doctor_name' => $d->doctor->user->name ?? 'N/A',
+                    ];
+                }),
+                'lab_results' => $labResults->map(function ($lab) {
+                    return [
+                        'id' => $lab->id,
+                        'test_name' => $lab->test_name,
+                        'result' => $lab->result,
+                        'reference_range' => $lab->reference_range,
+                        'interpretation' => $lab->interpretation,
+                        'performed_at' => $lab->performed_at?->format('Y-m-d'),
+                        'file_path' => $lab->file_path,
+                        'doctor_name' => $lab->doctor->user->name ?? 'N/A',
+                    ];
+                }),
+                'radiology_results' => $radiologyResults->map(function ($rad) {
+                    return [
+                        'id' => $rad->id,
+                        'study_type' => $rad->study_type,
+                        'findings' => $rad->findings,
+                        'impression' => $rad->impression,
+                        'performed_at' => $rad->performed_at?->format('Y-m-d'),
+                        'file_path' => $rad->file_path,
+                        'doctor_name' => $rad->doctor->user->name ?? 'N/A',
+                    ];
+                }),
+                'prescriptions' => $prescriptions->map(function ($p) {
+                    return [
+                        'id' => $p->id,
+                        'medicine' => $p->medicine,
+                        'dose' => $p->dose,
+                        'frequency' => $p->frequency,
+                        'duration' => $p->duration,
+                        'notes' => $p->notes,
+                        'prescribed_at' => $p->created_at->format('Y-m-d'),
+                        'doctor_name' => $p->doctor->user->name ?? 'N/A',
+                    ];
+                }),
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('EMR fetch error: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Error fetching EMR data',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get the patient's prescriptions
+     */
+    public function prescriptions(Request $request)
+    {
+        try {
+            $patient = Patient::where('user_id', Auth::id())->first();
+
+            if (!$patient) {
+                return response()->json([]);
+            }
+
+            $prescriptions = Prescription::where('patient_id', $patient->id)
+                ->with(['doctor.user'])
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->map(function ($prescription) {
+                    return [
+                        'id' => $prescription->id,
+                        'medicine' => $prescription->medicine,
+                        'dose' => $prescription->dose,
+                        'frequency' => $prescription->frequency,
+                        'duration' => $prescription->duration,
+                        'notes' => $prescription->notes,
+                        'prescribed_at' => $prescription->created_at->format('Y-m-d'),
+                        'doctor_name' => $prescription->doctor->user->name ?? 'N/A',
+                    ];
+                });
+
+            return response()->json($prescriptions);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Error fetching prescriptions',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get list of all available doctors
+     */
+    public function getDoctors(Request $request)
+{
+    try {
+        $doctors = Doctor::with(['user', 'services'])->get()->map(function ($doctor) {
+            $photoUrl = null;
+            $imagePath = $doctor->image ?? $doctor->photo;
+            if ($imagePath && Storage::disk('public')->exists($imagePath)) {
+                $photoUrl = asset('storage/' . $imagePath);
+            }
+
+            return [
+                'id' => $doctor->id,
+                'name' => $doctor->user->name ?? 'Unknown Doctor',
+                'specialization' => $doctor->specialization ?? 'General Practice',
+                'photo_url' => $photoUrl,
+                'image' => $photoUrl,
+                'email' => $doctor->user->email ?? null,
+                'consultation_fee' => $doctor->consultation_fee ?? 0,
+                'experience_years' => $doctor->experience_years ?? 0,
+                'clinic_name' => $doctor->clinic_name ?? null,
+                'bio' => $doctor->bio ?? null,
+                'services_count' => $doctor->services->where('is_active', true)->count(),
+            ];
+        });
+
+        return response()->json($doctors);
+    } catch (\Exception $e) {
+        \Log::error('Error fetching doctors: ' . $e->getMessage());
+        return response()->json([
+            'message' => 'Error fetching doctors list',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
+    /**
+     * Get a specific doctor's services
+     */
+    public function getDoctorServices($doctorId)
+{
+    try {
+        $doctor = Doctor::with('services')->find($doctorId);
+        if (!$doctor) {
+            return response()->json(['message' => 'Doctor not found'], 404);
+        }
+        return response()->json([
+            'services' => $doctor->services ?? []
+        ]);
+    } catch (\Exception $e) {
+        \Log::error('Error fetching doctor services: ' . $e->getMessage());
+        return response()->json(['message' => 'Error fetching doctor services'], 500);
+    }
+}
 
     /**
      * Get patient health metrics
@@ -824,6 +513,33 @@ public function invoiceDetail(Request $request, Invoice $invoice)
         return response()->json([]);
     }
 
+    /**
+ * Get patient dashboard stats
+ */
+public function dashboardStats(Request $request)
+{
+    $patient = Patient::where('user_id', Auth::id())->first();
+
+    if (!$patient) {
+        return response()->json([
+            'total' => 0,
+            'pending' => 0,
+            'confirmed' => 0,
+            'completed' => 0,
+            'cancelled' => 0,
+        ]);
+    }
+
+    $bookings = Booking::where('patient_id', $patient->id)->get();
+
+    return response()->json([
+        'total' => $bookings->count(),
+        'pending' => $bookings->where('status', 'pending')->count(),
+        'confirmed' => $bookings->where('status', 'confirmed')->count(),
+        'completed' => $bookings->where('status', 'completed')->count(),
+        'cancelled' => $bookings->where('status', 'cancelled')->count(),
+    ]);
+}
     /**
      * Add a new file
      */

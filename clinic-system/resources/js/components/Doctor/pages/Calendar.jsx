@@ -414,6 +414,7 @@ function WeeklyGrid({
                     {weekDates.map((d) => {
                         const key = toKey(d);
                         const isToday = key === todayKey;
+                        console.log('Comparing', key, 'vs', todayKey, '→', isToday);
                         return (
                             <div key={key} className={`flex flex-col items-center py-2.5 ${calBorderRight} ${isToday ? 'bg-[#005eb8]/[0.05]' : ''}`}>
                                 <div className={`text-[10px] font-medium ${d.getDay() === 0 ? 'text-[#ba1a1a]/70' : 'text-[#424752]'}`}>
@@ -435,12 +436,12 @@ function WeeklyGrid({
                 <div className="grid" style={{ gridTemplateColumns: '56px repeat(7, 1fr)' }}>
                     {/* Time labels */}
                     <div className={`relative ${calBorderRight}`}>
-                        {hours.map((h) => (
-                            <div key={h} style={{ height: HOUR_HEIGHT }} className="text-[11px] font-medium text-[#424752] text-right pr-3 -translate-y-2">
-                                {String(h).padStart(2, '0')}:00
-                            </div>
-                        ))}
-                    </div>
+    {hours.map((h) => (
+        <div key={h} style={{ height: HOUR_HEIGHT }} className="text-[11px] font-medium text-[#424752] text-right pr-3 flex items-start justify-end pt-1">
+            {String(h).padStart(2, '0')}:00
+        </div>
+    ))}
+</div>
 
                     {/* Days */}
                     {weekDates.map((d) => {
@@ -844,6 +845,7 @@ const Calendar = () => {
     };
 
     const todayKey = toKey(new Date());
+    console.log('Real today:', new Date().toString(), '→ todayKey:', todayKey);
 
     const statCards = [
         { label: 'Total Appointments', value: bookings.length, tone: 'slate' },
@@ -959,7 +961,7 @@ const Calendar = () => {
                             </div>
 
                             {/* Weekly Grid */}
-                            <div className="flex-1 min-h-0">
+                            <div className="flex-1 min-h-0 flex flex-col">
                                 <WeeklyGrid
                                     weekDates={weekDates}
                                     bookingsByDay={bookingsByDay}
