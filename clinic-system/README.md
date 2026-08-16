@@ -6,6 +6,27 @@
 
 *A multi-role clinic management platform built for doctors, receptionists, patients, and administrators.*
 
+<br>
+
+![PHP](https://img.shields.io/badge/PHP-8.1%2B-777BB4?style=for-the-badge&logo=php&logoColor=white)
+![Laravel](https://img.shields.io/badge/Laravel-11-FF2D20?style=for-the-badge&logo=laravel&logoColor=white)
+![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black)
+![JavaScript](https://img.shields.io/badge/JavaScript-ES6%2B-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
+![MySQL](https://img.shields.io/badge/MySQL-Database-4479A1?style=for-the-badge&logo=mysql&logoColor=white)
+
+<br>
+
+![Laravel Sanctum](https://img.shields.io/badge/Laravel%20Sanctum-Authentication-FF2D20?style=for-the-badge&logo=laravel&logoColor=white)
+![REST API](https://img.shields.io/badge/REST-API-02569B?style=for-the-badge)
+![Vite](https://img.shields.io/badge/Vite-Build%20Tool-646CFF?style=for-the-badge&logo=vite&logoColor=white)
+![Git](https://img.shields.io/badge/Git-Version%20Control-F05032?style=for-the-badge&logo=git&logoColor=white)
+
+<br>
+
+![FHIR](https://img.shields.io/badge/HL7-FHIR%20Export-00897B?style=for-the-badge)
+![Composer](https://img.shields.io/badge/Composer-PHP%20Dependencies-885630?style=for-the-badge&logo=composer&logoColor=white)
+![npm](https://img.shields.io/badge/npm-Package%20Manager-CB3837?style=for-the-badge&logo=npm&logoColor=white)
+
 </div>
 
 ---
