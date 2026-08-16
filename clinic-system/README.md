@@ -51,7 +51,7 @@ The system supports **four distinct roles** — **Admin**, **Doctor**, **Recepti
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/appointmetn receptionist.png" width="900">
+  <img src="docs/screenshots/appointment-receptionist.png" width="900">
 </p>
 
 <p align="center">
@@ -59,7 +59,7 @@ The system supports **four distinct roles** — **Admin**, **Doctor**, **Recepti
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/Book-appointment receptionist.png" width="900">
+  <img src="docs/screenshots/book-appointment-receptionist.png" width="900">
 </p>
 
 <p align="center">
@@ -67,7 +67,7 @@ The system supports **four distinct roles** — **Admin**, **Doctor**, **Recepti
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/walk-in patient registration.png" width="900">
+  <img src="docs/screenshots/walk-in-patient-registration.png" width="900">
 </p>
 
 <p align="center">
@@ -103,7 +103,7 @@ The system supports **four distinct roles** — **Admin**, **Doctor**, **Recepti
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/Patient-erm.png" width="900">
+  <img src="docs/screenshots/Patient-emr.png" width="900">
 </p>
 
 <p align="center">
