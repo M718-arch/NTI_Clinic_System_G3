@@ -11,7 +11,7 @@
 ---
 
 <p align="center">
-  <img src="clinic-system/docs/screenshots/pulse.Gif" width="900">
+  <img src="clinic-system/docs/screenshots/pulse.gif" width="900">
 </p>
 
 ---
