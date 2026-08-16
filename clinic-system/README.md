@@ -277,10 +277,10 @@ http://localhost:8000
 | Name                        | Role                 |
 | --------------------------- | -------------------- |
 | **Mario Sameh Fawzy Moans** | Full Stack Developer |
-| **Mohamed Sameh**           | Developer            |
-| **Shahd Ashraf**            | Developer            |
-| **Shahd Keshk**             | Developer            |
-| **Nour Zeidan**             | Developer            |
+| **Mohamed Sameh**           | Full Stack Developer |
+| **Shahd Ashraf**            | Full Stack Developer |
+| **Shahd Keshk**             | Full Stack Developer |
+| **Nour Zeidan**             | Full Stack Developer |
 
 ---
 
