@@ -10,6 +10,12 @@
 
 ---
 
+<p align="center">
+  <img src="clinic-system/docs/screenshots/pulse.Gif" width="900">
+</p>
+
+---
+
 # 📖 Overview
 
 **ClinicMS** is a full-stack clinic management system built on a Laravel REST API backend with a React frontend. It brings together everything a small-to-mid-size clinic needs to run day to day: patient registration and approval, appointment scheduling, a live front-desk queue, billing and invoicing, electronic medical records, prescriptions, in-app notifications, and operational reporting — all behind role-based authentication with **Laravel Sanctum**.
