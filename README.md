@@ -101,13 +101,6 @@ The system supports **four distinct roles** — **Admin**, **Doctor**, **Recepti
   <em>Registering a walk-in patient at the clinic.</em>
 </p>
 
-<p align="center">
-  <img src="clinic-system/docs/screenshots/Patient-list.png" width="900">
-</p>
-
-<p align="center">
-  <em>Receptionist patient list and management interface.</em>
-</p>
 
 ---
 
@@ -136,6 +129,15 @@ The system supports **four distinct roles** — **Admin**, **Doctor**, **Recepti
 <p align="center">
   <em>Electronic medical record for managing patient clinical information.</em>
 </p>
+
+<p align="center">
+  <img src="clinic-system/docs/screenshots/Patient-list.png" width="900">
+</p>
+
+<p align="center">
+  <em>Doctor patient list and management interface.</em>
+</p>
+
 
 ---
 
