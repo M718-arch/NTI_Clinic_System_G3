@@ -28,7 +28,7 @@ The system supports **four distinct roles** — **Admin**, **Doctor**, **Recepti
   <em>Sign-in, receptionist dashboard, patient dashboard, doctor dashboard, appointment booking, patient chart, and scheduling views across the four roles.</em>
 </p>
 
-> Individual full-size screenshots per screen can be dropped into `docs/screenshots/` and linked below as the project grows — this collage is a preview of the current build.
+
 
 ---
 
