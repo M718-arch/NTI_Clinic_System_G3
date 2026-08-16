@@ -21,7 +21,7 @@ The system supports **four distinct roles** — **Admin**, **Doctor**, **Recepti
 # 📸 Screenshots
 
 <p align="center">
-  <img src="docs/screenshots/system_screens.png" width="900">
+  <img src="docs/screenshots/d892e78c-8d92-4125-a067-1b226103ef89.png" width="900">
 </p>
 
 <p align="center">
