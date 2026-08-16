@@ -11,7 +11,7 @@
 ---
 
 <p align="center">
-  <img src="docs/screenshots/pulse.gif" width="900">
+  <img src="docs/screenshots/pulse.gif" width="600">
 </p>
 
 ---
