@@ -20,13 +20,176 @@ The system supports **four distinct roles** — **Admin**, **Doctor**, **Recepti
 
 # 📸 Screenshots
 
+## 🔐 Authentication & Registration
+
+<p align="center">
+  <img src="docs/screenshots/Sign-in.png" width="900">
+</p>
+
+<p align="center">
+  <em>ClinicMS authentication interface with role-based access.</em>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/self-patient-registration.png" width="900">
+</p>
+
+<p align="center">
+  <em>Patient self-registration before receptionist approval.</em>
+</p>
+
+---
+
+## 🧑‍💼 Receptionist
+
+<p align="center">
+  <img src="docs/screenshots/Receptionist-Dashboard.png" width="900">
+</p>
+
+<p align="center">
+  <em>Receptionist dashboard with today's appointments, patient activity, and quick actions.</em>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/appointmetn receptionist.png" width="900">
+</p>
+
+<p align="center">
+  <em>Receptionist appointment management.</em>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/Book-appointment receptionist.png" width="900">
+</p>
+
+<p align="center">
+  <em>Receptionist booking an appointment for a patient.</em>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/walk-in patient registration.png" width="900">
+</p>
+
+<p align="center">
+  <em>Registering a walk-in patient at the clinic.</em>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/Patient-list.png" width="900">
+</p>
+
+<p align="center">
+  <em>Receptionist patient list and management interface.</em>
+</p>
+
+---
+
+## 👨‍⚕️ Doctor
+
+<p align="center">
+  <img src="docs/screenshots/Doctor-Portal.png" width="900">
+</p>
+
+<p align="center">
+  <em>Doctor portal for managing appointments, patients, and clinical activities.</em>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/Doctor-Calendar.png" width="900">
+</p>
+
+<p align="center">
+  <em>Doctor calendar displaying scheduled appointments.</em>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/Patient-erm.png" width="900">
+</p>
+
+<p align="center">
+  <em>Electronic medical record for managing patient clinical information.</em>
+</p>
+
+---
+
+## 🧑‍🦱 Patient
+
+<p align="center">
+  <img src="docs/screenshots/patient-dashboard.png" width="900">
+</p>
+
+<p align="center">
+  <em>Patient dashboard with appointments, medical information, and quick actions.</em>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/patient-profile.png" width="900">
+</p>
+
+<p align="center">
+  <em>Patient profile and personal information.</em>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/Booking-service.png" width="900">
+</p>
+
+<p align="center">
+  <em>Patient service and appointment booking interface.</em>
+</p>
+
+---
+
+## 💳 Billing & Invoicing
+
+<p align="center">
+  <img src="docs/screenshots/invoice.png" width="900">
+</p>
+
+<p align="center">
+  <em>Clinic invoice and payment tracking.</em>
+</p>
+
+---
+
+## 🛠️ Administration
+
+<p align="center">
+  <img src="docs/screenshots/admin-reports.png" width="900">
+</p>
+
+<p align="center">
+  <em>Administrative reports and clinic performance overview.</em>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/manage-doctors.png" width="900">
+</p>
+
+<p align="center">
+  <em>Admin interface for managing doctors.</em>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/manage-patients.png" width="900">
+</p>
+
+<p align="center">
+  <em>Admin interface for managing patients.</em>
+</p>
+
+---
+
+## 🖼️ System Overview
+
 <p align="center">
   <img src="docs/screenshots/d892e78c-8d92-4125-a067-1b226103ef89.png" width="900">
 </p>
 
 <p align="center">
-  <em>Sign-in, receptionist dashboard, patient dashboard, doctor dashboard, appointment booking, patient chart, and scheduling views across the four roles.</em>
+  <em>ClinicMS overview showcasing the main interfaces and workflows across the four user roles.</em>
 </p>
+
 
 
 
